@@ -27,7 +27,8 @@ public final class FeatureRegistry {
         settings: any SettingsStore,
         events: EventBus,
         commands: CommandRegistry,
-        log: Logger
+        log: Logger,
+        launch: LaunchContext = LaunchContext(isLoginLaunch: false)
     ) {
         self.settings = settings
         self.commands = commands
@@ -39,7 +40,8 @@ public final class FeatureRegistry {
                 id: descriptor.id,
                 settings: settings.namespaced(Self.settingsNamespace(for: descriptor.id)),
                 events: events,
-                log: AppLog.make(category: descriptor.id.rawValue)
+                log: AppLog.make(category: descriptor.id.rawValue),
+                launch: launch
             )
 
             return Entry(

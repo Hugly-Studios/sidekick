@@ -35,6 +35,7 @@ let project = Project(
             dependencies: [
                 .target(name: "AppCore"),
                 .target(name: "HotkeysKit"),
+                .target(name: "Workspaces"),
             ],
             settings: .settings(base: [
                 // Indirection through Config/Signing.xcconfig so a gitignored
@@ -51,6 +52,18 @@ let project = Project(
             "HotkeysKit",
             dependencies: [.external(name: "KeyboardShortcuts")],
             hasTests: false
+        )
+        + Module.core(
+            "Automation",
+            dependencies: [.target(name: "PrivateAPI")],
+            hasTests: false
+        )
+        + Module.feature(
+            "Workspaces",
+            dependencies: [
+                .target(name: "Automation"),
+                .target(name: "PrivateAPI"),
+            ]
         ),
     schemes: [
         .scheme(
@@ -60,6 +73,7 @@ let project = Project(
             testAction: .targets([
                 .testableTarget(target: .target("AppCoreTests")),
                 .testableTarget(target: .target("PrivateAPITests")),
+                .testableTarget(target: .target("WorkspacesTests")),
             ]),
             runAction: .runAction(executable: .target(Sidekick.appName))
         )

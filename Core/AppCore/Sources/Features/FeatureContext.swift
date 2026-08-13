@@ -12,16 +12,19 @@ public struct FeatureContext: Sendable {
 
     public let events: EventBus
     public let log: Logger
+    public let launch: LaunchContext
 
     public init(
         id: FeatureID,
         settings: any SettingsStore,
         events: EventBus,
-        log: Logger
+        log: Logger,
+        launch: LaunchContext
     ) {
         self.id = id
         self.settings = settings
         self.events = events
         self.log = log
+        self.launch = launch
     }
 }

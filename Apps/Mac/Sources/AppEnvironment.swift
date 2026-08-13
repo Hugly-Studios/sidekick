@@ -2,6 +2,7 @@ import AppCore
 import HotkeysKit
 import OSLog
 import Observation
+import Workspaces
 
 /// Wires the kernel together and holds the list of features the app ships with.
 @MainActor
@@ -30,13 +31,14 @@ final class AppEnvironment {
             settings: settings,
             events: events,
             commands: commands,
-            log: log
+            log: log,
+            launch: LaunchContext(isLoginLaunch: AppInstance.wasLaunchedByLaunchd)
         )
     }
 
     /// The single place where a new feature module is plugged in.
     /// See docs/adding-a-feature.md.
     static var featureTypes: [any Feature.Type] {
-        []
+        [WorkspacesFeature.self]
     }
 }
