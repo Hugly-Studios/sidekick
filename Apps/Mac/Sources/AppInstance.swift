@@ -9,11 +9,15 @@ import Foundation
 enum AppInstance {
     private static let showPanelNotification = Notification.Name("com.hugly.sidekick.showPanel")
 
-    /// True when this process was started by launchd, which is how a login item
-    /// is launched — as opposed to the user opening the app.
+    /// True when the embedded launch agent started this process, i.e. at login.
+    ///
+    /// The obvious check — "was I started by launchd" — is useless: every GUI
+    /// launch goes through launchd and gets an XPC_SERVICE_NAME of
+    /// `application.<bundle id>.<hash>`, so opening the app by hand looked exactly
+    /// like a login. An agent's process carries the agent's label instead.
     static var wasLaunchedByLaunchd: Bool {
-        let serviceName = ProcessInfo.processInfo.environment["XPC_SERVICE_NAME"] ?? "0"
-        return !serviceName.isEmpty && serviceName != "0"
+        ProcessInfo.processInfo.environment["XPC_SERVICE_NAME"]
+            == LaunchAtLoginController.agentLabel
     }
 
     /// Asks an already running instance to show its window and reports whether

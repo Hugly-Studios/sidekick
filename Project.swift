@@ -32,6 +32,13 @@ let project = Project(
                 "NSHumanReadableCopyright": .string("© \(Sidekick.organizationName)"),
             ]),
             sources: ["Apps/Mac/Sources/**"],
+            copyFiles: [
+                .wrapper(
+                    name: "Embed Launch Agent",
+                    subpath: "Contents/Library/LaunchAgents",
+                    files: ["Apps/Mac/LaunchAgents/com.hugly.sidekick.login.plist"]
+                )
+            ],
             dependencies: [
                 .target(name: "AppCore"),
                 .target(name: "HotkeysKit"),

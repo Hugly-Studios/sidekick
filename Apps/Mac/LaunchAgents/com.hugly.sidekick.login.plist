@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Launch agent for starting at login.
+
+  A plain login item (SMAppService.mainApp) would also work, but then the app
+  cannot tell a login launch from the user opening it: every GUI launch gets an
+  XPC_SERVICE_NAME of application.<bundle id>.<hash>. An agent's process gets this
+  label instead, which is an unambiguous signal — and restoring a saved layout
+  must never happen just because someone opened the app.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.hugly.sidekick.login</string>
+	<key>BundleProgram</key>
+	<string>Contents/MacOS/Sidekick</string>
+	<key>AssociatedBundleIdentifiers</key>
+	<array>
+		<string>com.hugly.sidekick</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+	<key>ProcessType</key>
+	<string>Interactive</string>
+</dict>
+</plist>

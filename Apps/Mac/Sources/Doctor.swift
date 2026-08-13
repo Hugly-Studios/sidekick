@@ -90,7 +90,7 @@ enum Doctor {
     private static func loginItemSection() {
         print("login item")
 
-        let status = SMAppService.mainApp.status
+        let status = SMAppService.agent(plistName: LaunchAtLoginController.plistName).status
         let description =
             switch status {
             case .enabled: "enabled"

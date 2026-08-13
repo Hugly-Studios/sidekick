@@ -28,6 +28,7 @@ enum WorkspacesRemoteHandler {
 
         return """
             доступ к окнам: \(feature.hasWindowAccess ? "есть" : "нет")
+            запущено при логине: \(AppInstance.wasLaunchedByLaunchd ? "да" : "нет")
             снимков: \(feature.snapshots.count)
             \(feature.visibleWindowSummary())
             автоперестановка столов: \
