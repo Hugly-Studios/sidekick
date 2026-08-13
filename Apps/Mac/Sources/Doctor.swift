@@ -157,17 +157,15 @@ enum Doctor {
             accessibilityDescription: nil
         )
 
-        // AppKit needs a run loop turn before the item is placed in the bar.
-        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
-
         defer { NSStatusBar.system.removeStatusItem(item) }
 
-        guard let frame = item.button?.window?.frame,
-            let screen = NSScreen.main,
+        guard let frame = placedFrame(of: item) else { return .unknown }
+
+        guard let screen = NSScreen.main,
             let leftArea = screen.auxiliaryTopLeftArea,
             let rightArea = screen.auxiliaryTopRightArea
         else {
-            guard let frame = item.button?.window?.frame else { return .unknown }
+            // No notch on this display, so a placed item is a visible item.
             return .visible(x: frame.minX)
         }
 
@@ -176,6 +174,25 @@ enum Doctor {
         return notch.contains(frame.midX)
             ? .behindNotch(x: frame.minX, notch: notch)
             : .visible(x: frame.minX)
+    }
+
+    /// Waits until AppKit actually places the item in the bar.
+    ///
+    /// Until then the button's window still sits at its default origin, which
+    /// would read as a perfectly visible x=0 and hide the very problem this
+    /// check exists to find.
+    private static func placedFrame(of item: NSStatusItem) -> CGRect? {
+        let deadline = Date().addingTimeInterval(2)
+
+        while Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+
+            if let frame = item.button?.window?.frame, frame.minX > 0, frame.width > 0 {
+                return frame
+            }
+        }
+
+        return nil
     }
 
     // MARK: - Output

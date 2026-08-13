@@ -9,6 +9,6 @@ public enum Hotkeys {
     /// be reachable when the menu bar icon is not, without colliding with apps.
     public static let openPanel = KeyboardShortcuts.Name(
         "openPanel",
-        default: .init(.s, modifiers: [.control, .option, .command])
+        initial: .init(.s, modifiers: [.control, .option, .command])
     )
 }

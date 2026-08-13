@@ -25,6 +25,7 @@ let project = Project(
             infoPlist: .extendingDefault(with: [
                 // Menu bar app: no Dock icon, no main window.
                 "LSUIElement": true,
+                "LSApplicationCategoryType": "public.app-category.productivity",
                 "CFBundleDisplayName": .string(Sidekick.appName),
                 "CFBundleShortVersionString": "$(MARKETING_VERSION)",
                 "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
