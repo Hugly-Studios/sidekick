@@ -6,7 +6,7 @@ import SwiftUI
 /// The scene can only be opened by the user through `SettingsLink`, and the menu
 /// bar icon is not always reachable — on notched Macs a full menu bar pushes new
 /// status items behind the notch. Owning the window lets the app open it on first
-/// launch and later from a global hotkey.
+/// launch, from a global hotkey and from a second launch of the app.
 @MainActor
 final class SettingsWindowController {
     private let environment: AppEnvironment
@@ -37,6 +37,8 @@ final class SettingsWindowController {
         window.contentView = NSHostingView(rootView: SettingsRootView(environment: environment))
         window.isReleasedWhenClosed = false
         window.center()
+        // Restores position and size across launches and reinstalls.
+        window.setFrameAutosaveName("SidekickSettingsWindow")
 
         return window
     }

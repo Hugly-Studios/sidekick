@@ -25,12 +25,17 @@ jobs:
           path: ~/.cache/sidekick/tuist
           key: tuist-${{ hashFiles('.tuist-version') }}
 
-      - name: Install Tuist
-        run: echo "TUIST=$(scripts/install-tuist.sh)" >> "$GITHUB_ENV"
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: Tuist/.build
+          key: spm-${{ hashFiles('Tuist/Package.resolved') }}
+
+      - name: Resolve dependencies
+        run: scripts/tuist.sh install
 
       - name: Generate project
-        run: |
-          "$TUIST" generate --no-open
+        run: scripts/tuist.sh generate --no-open
 
       - name: Build and test
         run: |

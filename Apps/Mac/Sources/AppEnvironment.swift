@@ -1,4 +1,5 @@
 import AppCore
+import HotkeysKit
 import OSLog
 import Observation
 
@@ -11,6 +12,7 @@ final class AppEnvironment {
     let commands: CommandRegistry
     let features: FeatureRegistry
     let launchAtLogin: LaunchAtLoginController
+    let hotkeys: HotkeyService
 
     init() {
         let log = AppLog.make(category: "app")
@@ -22,6 +24,7 @@ final class AppEnvironment {
         self.events = events
         self.commands = commands
         self.launchAtLogin = LaunchAtLoginController()
+        self.hotkeys = HotkeyService()
         self.features = FeatureRegistry(
             featureTypes: Self.featureTypes,
             settings: settings,

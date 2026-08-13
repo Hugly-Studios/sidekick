@@ -1,3 +1,4 @@
+import HotkeysKit
 import SwiftUI
 
 struct GeneralSettingsView: View {
@@ -23,6 +24,16 @@ struct GeneralSettingsView: View {
                 Text("Разрешение выдаётся в «Основные» → «Элементы входа и расширения».")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            }
+
+            Section {
+                HotkeyRecorder("Открыть Sidekick:", name: Hotkeys.openPanel)
+            } footer: {
+                Text(
+                    "Иконка в строке меню может быть недоступна: на Mac с вырезом заполненная строка меню прячет новые иконки за ним. Горячая клавиша открывает окно всегда."
+                )
+                .font(.callout)
+                .foregroundStyle(.secondary)
             }
 
             Section("О программе") {

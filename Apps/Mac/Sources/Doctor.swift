@@ -1,0 +1,191 @@
+import AppKit
+import HotkeysKit
+import ServiceManagement
+
+/// Prints how this copy of Sidekick is installed and whether it is reachable.
+///
+/// Exists because the failure modes of a menu bar app are invisible: an ad-hoc
+/// signature silently drops permission grants on every rebuild, and a full menu
+/// bar on a notched Mac hides the icon entirely.
+@MainActor
+enum Doctor {
+    static func run() {
+        print("Sidekick doctor")
+        print("")
+
+        bundleSection()
+        signingSection()
+        loginItemSection()
+        reachabilitySection()
+        permissionsSection()
+    }
+
+    private static func bundleSection() {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+
+        print("bundle")
+        line("id", Bundle.main.bundleIdentifier ?? "?")
+        line("version", "\(version) (\(build))")
+        line("path", Bundle.main.bundleURL.path)
+        line("launched by launchd", AppInstance.wasLaunchedByLaunchd ? "yes" : "no")
+
+        let running =
+            NSRunningApplication
+            .runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
+            .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+
+        line("other running copies", running.isEmpty ? "none" : "\(running.count)")
+        for application in running {
+            line("  copy", application.bundleURL?.path ?? "unknown path")
+        }
+        print("")
+    }
+
+    private static func signingSection() {
+        print("code signature")
+
+        var staticCode: SecStaticCode?
+        guard
+            SecStaticCodeCreateWithPath(Bundle.main.bundleURL as CFURL, [], &staticCode)
+                == errSecSuccess,
+            let staticCode
+        else {
+            line("state", "unreadable")
+            print("")
+            return
+        }
+
+        var information: CFDictionary?
+        guard
+            SecCodeCopySigningInformation(
+                staticCode,
+                SecCSFlags(rawValue: kSecCSSigningInformation),
+                &information
+            )
+                == errSecSuccess,
+            let details = information as? [String: Any]
+        else {
+            line("state", "unreadable")
+            print("")
+            return
+        }
+
+        let flags = details[kSecCodeInfoFlags as String] as? UInt32 ?? 0
+        let isAdHoc = flags & SecCodeSignatureFlags.adhoc.rawValue != 0
+
+        line("team", details[kSecCodeInfoTeamIdentifier as String] as? String ?? "none")
+        line("kind", isAdHoc ? "ad-hoc" : "identity")
+
+        if isAdHoc {
+            warn(
+                "ad-hoc signatures change on every build, so macOS drops granted permissions",
+                fix: "cp Config/Signing.local.xcconfig.example Config/Signing.local.xcconfig"
+            )
+        }
+        print("")
+    }
+
+    private static func loginItemSection() {
+        print("login item")
+
+        let status = SMAppService.mainApp.status
+        let description =
+            switch status {
+            case .enabled: "enabled"
+            case .requiresApproval: "requires approval in System Settings"
+            case .notRegistered: "not registered"
+            case .notFound: "not found"
+            @unknown default: "unknown"
+            }
+
+        line("status", description)
+        print("")
+    }
+
+    private static func reachabilitySection() {
+        print("reachability")
+
+        let shortcut = HotkeyService.shortcutDescription(for: Hotkeys.openPanel)
+        line("open panel shortcut", shortcut ?? "not set")
+
+        if shortcut == nil {
+            warn(
+                "without a shortcut the app is only reachable through the menu bar icon",
+                fix: "set it in Sidekick settings, section General"
+            )
+        }
+
+        switch menuBarIconPlacement() {
+        case .visible(let x):
+            line("menu bar icon", "visible at x=\(Int(x))")
+        case .behindNotch(let x, let notch):
+            line("menu bar icon", "hidden at x=\(Int(x))")
+            warn(
+                "the menu bar is full, so the icon sits behind the notch (x \(Int(notch.lowerBound))-\(Int(notch.upperBound)))",
+                fix: "free space right of the notch, or use the shortcut above"
+            )
+        case .unknown:
+            line("menu bar icon", "could not measure")
+        }
+        print("")
+    }
+
+    private static func permissionsSection() {
+        print("permissions")
+        line("accessibility", AXIsProcessTrusted() ? "granted" : "not granted")
+        print("")
+    }
+
+    // MARK: - Menu bar measurement
+
+    private enum IconPlacement {
+        case visible(x: CGFloat)
+        case behindNotch(x: CGFloat, notch: ClosedRange<CGFloat>)
+        case unknown
+    }
+
+    /// Places a temporary status item to find out where the system would put ours.
+    private static func menuBarIconPlacement() -> IconPlacement {
+        let application = NSApplication.shared
+        application.setActivationPolicy(.accessory)
+
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        item.button?.image = NSImage(
+            systemSymbolName: "square.grid.2x2",
+            accessibilityDescription: nil
+        )
+
+        // AppKit needs a run loop turn before the item is placed in the bar.
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+
+        defer { NSStatusBar.system.removeStatusItem(item) }
+
+        guard let frame = item.button?.window?.frame,
+            let screen = NSScreen.main,
+            let leftArea = screen.auxiliaryTopLeftArea,
+            let rightArea = screen.auxiliaryTopRightArea
+        else {
+            guard let frame = item.button?.window?.frame else { return .unknown }
+            return .visible(x: frame.minX)
+        }
+
+        let notch = leftArea.maxX...rightArea.minX
+
+        return notch.contains(frame.midX)
+            ? .behindNotch(x: frame.minX, notch: notch)
+            : .visible(x: frame.minX)
+    }
+
+    // MARK: - Output
+
+    private static func line(_ label: String, _ value: String) {
+        print("  \(label.padding(toLength: 22, withPad: " ", startingAt: 0)) \(value)")
+    }
+
+    private static func warn(_ problem: String, fix: String) {
+        print("  ! \(problem)")
+        print("    fix: \(fix)")
+    }
+}

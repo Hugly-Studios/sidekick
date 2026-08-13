@@ -31,11 +31,26 @@ let project = Project(
                 "NSHumanReadableCopyright": .string("© \(Sidekick.organizationName)"),
             ]),
             sources: ["Apps/Mac/Sources/**"],
-            dependencies: [.target(name: "AppCore")]
+            dependencies: [
+                .target(name: "AppCore"),
+                .target(name: "HotkeysKit"),
+            ],
+            settings: .settings(base: [
+                // Indirection through Config/Signing.xcconfig so a gitignored
+                // local file can pin a stable identity per machine.
+                "CODE_SIGN_STYLE": "$(SIDEKICK_CODE_SIGN_STYLE)",
+                "CODE_SIGN_IDENTITY": "$(SIDEKICK_CODE_SIGN_IDENTITY)",
+                "DEVELOPMENT_TEAM": "$(SIDEKICK_DEVELOPMENT_TEAM)",
+            ])
         )
     ]
         + Module.core("AppCore")
-        + Module.core("PrivateAPI"),
+        + Module.core("PrivateAPI")
+        + Module.core(
+            "HotkeysKit",
+            dependencies: [.external(name: "KeyboardShortcuts")],
+            hasTests: false
+        ),
     schemes: [
         .scheme(
             name: Sidekick.appName,

@@ -1,10 +1,17 @@
 #!/bin/bash
-# Installs the Tuist version pinned in .tuist-version and prints the binary path.
-# Keeps CI reproducible instead of tracking whatever Homebrew ships today.
+# Prints the path to the Tuist version pinned in .tuist-version, downloading it
+# when needed. Keeps local machines and CI on the same generator.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 version="$(tr -d '[:space:]' <"$repo_root/.tuist-version")"
+
+# Reuse an already installed Tuist when it is exactly the pinned version.
+if command -v tuist >/dev/null 2>&1 && [[ "$(tuist version 2>/dev/null)" == "$version" ]]; then
+	command -v tuist
+	exit 0
+fi
+
 install_dir="${TUIST_INSTALL_DIR:-$HOME/.cache/sidekick/tuist/$version}"
 binary="$install_dir/tuist"
 

@@ -1,8 +1,11 @@
-// Copy to Signing.local.xcconfig (gitignored) to sign with your own identity.
-// A stable signature keeps macOS permission grants across rebuilds.
+// Copy to Signing.local.xcconfig (gitignored) to sign with your own identity,
+// or just run `make setup`, which generates it from your keychain.
 //
-// Find your team id and identity name with:
+// A stable signature keeps macOS permission grants across rebuilds and
+// reinstalls, because TCC keys them to the signing team.
+//
+// Find your team id with:
 //   security find-identity -v -p codesigning
-CODE_SIGN_STYLE = Automatic
-CODE_SIGN_IDENTITY = Apple Development
-DEVELOPMENT_TEAM = YOUR_TEAM_ID
+SIDEKICK_CODE_SIGN_STYLE = Manual
+SIDEKICK_CODE_SIGN_IDENTITY = Apple Development
+SIDEKICK_DEVELOPMENT_TEAM = YOUR_TEAM_ID

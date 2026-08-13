@@ -3,6 +3,7 @@
 *.xcworkspace
 .tuist/
 Derived/
+Tuist/.build/
 
 # Xcode
 build/

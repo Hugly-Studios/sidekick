@@ -1,8 +1,23 @@
 import AppCore
 import AppKit
+import HotkeysKit
 import SwiftUI
 
 @main
+enum SidekickMain {
+    @MainActor
+    static func main() {
+        if CommandLine.arguments.contains("--doctor") {
+            Doctor.run()
+            return
+        }
+
+        guard !AppInstance.handOverToRunningInstance() else { return }
+
+        SidekickApp.main()
+    }
+}
+
 struct SidekickApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
@@ -29,21 +44,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             await environment.features.start()
         }
 
-        // The menu bar icon can be unreachable (a full menu bar on a notched Mac
-        // hides new status items), so the first launch always shows a real window.
-        if !environment.settings.value(for: Self.hasShownWelcomeKey) {
-            environment.settings.set(true, for: Self.hasShownWelcomeKey)
-            settingsWindow.show()
+        environment.hotkeys.bind(Hotkeys.openPanel) { [weak self] in
+            self?.settingsWindow.show()
         }
+
+        AppInstance.observeShowPanelRequests { [weak self] in
+            self?.settingsWindow.show()
+        }
+
+        showWelcomeWindowIfNeeded()
     }
 
     /// Launching the app again is the reliable way back in when the menu bar icon
-    /// is not reachable.
-    func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        if !hasVisibleWindows {
-            settingsWindow.show()
-        }
-
+    /// is not reachable, so the window is shown regardless of other open windows.
+    func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
+        settingsWindow.show()
         return true
     }
 
@@ -55,5 +70,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         return .terminateLater
+    }
+
+    /// The menu bar icon can be unreachable (a full menu bar on a notched Mac hides
+    /// new status items), so the first manual launch always shows a real window.
+    /// Starting at login must stay silent.
+    private func showWelcomeWindowIfNeeded() {
+        guard !AppInstance.wasLaunchedByLaunchd,
+            !environment.settings.value(for: Self.hasShownWelcomeKey)
+        else { return }
+
+        environment.settings.set(true, for: Self.hasShownWelcomeKey)
+        settingsWindow.show()
     }
 }

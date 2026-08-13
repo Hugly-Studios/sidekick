@@ -4,13 +4,50 @@ import SwiftUI
 struct SettingsRootView: View {
     let environment: AppEnvironment
 
-    @State private var selection: Section = .general
+    @State private var selection: Section
+
+    init(environment: AppEnvironment) {
+        self.environment = environment
+
+        let stored = Section(storageValue: environment.settings.value(for: Self.selectionKey))
+        let isReachable =
+            switch stored {
+            case .general, .modules: true
+            case .feature(let id): environment.features.entry(for: id)?.isEnabled == true
+            }
+
+        _selection = State(initialValue: isReachable ? stored : .general)
+    }
 
     enum Section: Hashable {
         case general
         case modules
         case feature(FeatureID)
+
+        var storageValue: String {
+            switch self {
+            case .general: "general"
+            case .modules: "modules"
+            case .feature(let id): "feature:\(id.rawValue)"
+            }
+        }
+
+        init(storageValue: String) {
+            switch storageValue {
+            case "modules":
+                self = .modules
+            case let value where value.hasPrefix("feature:"):
+                self = .feature(FeatureID(rawValue: String(value.dropFirst("feature:".count))))
+            default:
+                self = .general
+            }
+        }
     }
+
+    private static let selectionKey = SettingKey(
+        "settings.selection",
+        default: Section.general.storageValue
+    )
 
     var body: some View {
         NavigationSplitView {
@@ -37,6 +74,9 @@ struct SettingsRootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(minWidth: 720, minHeight: 440)
+        .onChange(of: selection) { _, newValue in
+            environment.settings.set(newValue.storageValue, for: Self.selectionKey)
+        }
     }
 
     private var enabledEntries: [FeatureRegistry.Entry] {
