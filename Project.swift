@@ -34,13 +34,17 @@ let project = Project(
             dependencies: [.target(name: "AppCore")]
         )
     ]
-        + Module.core("AppCore"),
+        + Module.core("AppCore")
+        + Module.core("PrivateAPI"),
     schemes: [
         .scheme(
             name: Sidekick.appName,
             shared: true,
             buildAction: .buildAction(targets: [.target(Sidekick.appName)]),
-            testAction: .targets([.testableTarget(target: .target("AppCoreTests"))]),
+            testAction: .targets([
+                .testableTarget(target: .target("AppCoreTests")),
+                .testableTarget(target: .target("PrivateAPITests")),
+            ]),
             runAction: .runAction(executable: .target(Sidekick.appName))
         )
     ]
