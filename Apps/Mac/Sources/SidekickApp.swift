@@ -37,6 +37,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Launching the app again is the reliable way back in when the menu bar icon
+    /// is not reachable.
+    func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if !hasVisibleWindows {
+            settingsWindow.show()
+        }
+
+        return true
+    }
+
     /// Gives features a real async shutdown hook instead of racing termination.
     func applicationShouldTerminate(_ application: NSApplication) -> NSApplication.TerminateReply {
         Task {
