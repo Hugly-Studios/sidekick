@@ -7,6 +7,7 @@ import SwiftUI
 /// `Divider`) because the extra uses the native `.menu` style.
 struct MenuBarContent: View {
     let environment: AppEnvironment
+    let settingsWindow: SettingsWindowController
 
     private var activeEntries: [FeatureRegistry.Entry] {
         environment.features.entries.filter { $0.isEnabled && $0.failure == nil }
@@ -33,8 +34,8 @@ struct MenuBarContent: View {
 
         Divider()
 
-        SettingsLink {
-            Text("Настройки…")
+        Button("Настройки…") {
+            settingsWindow.show()
         }
         .keyboardShortcut(",", modifiers: .command)
 
