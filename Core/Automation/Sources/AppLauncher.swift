@@ -18,7 +18,7 @@ public struct AppLauncher {
         bundleID: String,
         timeout: Duration = .seconds(20)
     ) async throws {
-        if !inspector.windows(ofBundleID: bundleID).isEmpty { return }
+        if inspector.hasWindowsAnywhere(bundleID: bundleID) { return }
 
         if NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty {
             try await launch(bundleID: bundleID)
@@ -27,7 +27,7 @@ public struct AppLauncher {
         let deadline = ContinuousClock.now + timeout
 
         while ContinuousClock.now < deadline {
-            if !inspector.windows(ofBundleID: bundleID).isEmpty { return }
+            if inspector.hasWindowsAnywhere(bundleID: bundleID) { return }
             try await Task.sleep(for: .milliseconds(200))
         }
 

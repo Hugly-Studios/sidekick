@@ -12,6 +12,10 @@ enum SidekickMain {
             return
         }
 
+        if WorkspacesCommandLine.run(arguments: CommandLine.arguments) {
+            return
+        }
+
         guard !AppInstance.handOverToRunningInstance() else { return }
 
         SidekickApp.main()
@@ -42,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_: Notification) {
         Task {
             await environment.features.start()
+            WorkspacesRemoteHandler.install(features: environment.features)
         }
 
         environment.hotkeys.bind(Hotkeys.openPanel) { [weak self] in

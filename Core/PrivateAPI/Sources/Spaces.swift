@@ -64,6 +64,8 @@ public enum PrivateAPIError: Error, LocalizedError, Equatable {
     case skyLightUnavailable
     case symbolUnavailable(String)
     case moveNotConfirmed(windowIDs: [CGWindowID], spaceID: SpaceID)
+    case spaceNotFound(SpaceID)
+    case spaceSwitchFailed(SpaceID)
 
     public var errorDescription: String? {
         switch self {
@@ -73,6 +75,10 @@ public enum PrivateAPIError: Error, LocalizedError, Equatable {
             "Точка входа \(name) отсутствует в этой версии macOS"
         case .moveNotConfirmed(let windowIDs, let spaceID):
             "Не удалось перенести окна \(windowIDs) на рабочий стол \(spaceID)"
+        case .spaceNotFound(let spaceID):
+            "Рабочий стол \(spaceID) не найден"
+        case .spaceSwitchFailed(let spaceID):
+            "Не удалось переключиться на рабочий стол \(spaceID)"
         }
     }
 }

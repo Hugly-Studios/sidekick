@@ -85,6 +85,12 @@ public final class FeatureRegistry {
         entries.first { $0.id == id }
     }
 
+    /// Typed access to a feature instance, for surfaces that need more than the
+    /// generic command list.
+    public func feature<Concrete: Feature>(_ type: Concrete.Type) -> Concrete? {
+        entries.compactMap { $0.feature as? Concrete }.first
+    }
+
     private func activate(at index: Int) async {
         let entry = entries[index]
 
@@ -101,7 +107,9 @@ public final class FeatureRegistry {
         }
     }
 
-    private static func settingsNamespace(for id: FeatureID) -> String {
+    /// Public so other entry points (CLI, diagnostics) read the same settings a
+    /// running feature does.
+    public static func settingsNamespace(for id: FeatureID) -> String {
         "features.\(id.rawValue)"
     }
 

@@ -32,17 +32,29 @@ public final class WorkspacesFeature: Feature {
     private let context: FeatureContext
     private let store: SnapshotStore
     private let spaces: SkyLightSpaces?
+    private let inspector: WindowInspector
     private let capturer: SnapshotCapturer?
     private let restorer: SnapshotRestorer?
 
     public init(context: FeatureContext) {
         let spaces = SkyLightSpaces()
+        let navigator = SkyLightSpaceNavigator()
+        let inspector = WindowInspector()
 
         self.context = context
         self.store = SnapshotStore()
         self.spaces = spaces
-        self.capturer = spaces.map { SnapshotCapturer(spaces: $0) }
-        self.restorer = spaces.map { SnapshotRestorer(spaces: $0, mover: $0) }
+        self.inspector = inspector
+
+        if let spaces, let navigator {
+            self.capturer = SnapshotCapturer(
+                spaces: spaces, navigator: navigator, inspector: inspector)
+            self.restorer = SnapshotRestorer(
+                spaces: spaces, mover: spaces, navigator: navigator, inspector: inspector)
+        } else {
+            self.capturer = nil
+            self.restorer = nil
+        }
 
         self.restoreOnLogin = context.settings.value(for: Keys.restoreOnLogin)
         self.defaultSnapshotID = UUID(uuidString: context.settings.value(for: Keys.defaultSnapshot))
@@ -63,6 +75,7 @@ public final class WorkspacesFeature: Feature {
         }
 
         reload()
+        context.log.info("Activated, window access: \(self.hasWindowAccess, privacy: .public)")
 
         // Enabling the module is exactly when asking for the permission makes
         // sense; macOS shows this prompt at most once, then stays silent.
@@ -122,6 +135,22 @@ public final class WorkspacesFeature: Feature {
         AccessibilityAuthorization.isGranted
     }
 
+    /// What the app currently sees through Accessibility, for diagnostics.
+    public func visibleWindowSummary() -> String {
+        guard let windows = try? inspector.windows() else { return "окна недоступны" }
+
+        let byApp = Dictionary(grouping: windows, by: \.appName)
+            .map { "\($0.key): \($0.value.count)" }
+            .sorted()
+
+        return "окон видно \(windows.count) — \(byApp.joined(separator: ", "))"
+    }
+
+    /// Raw Accessibility numbers per app, for when a snapshot looks too empty.
+    public func windowDiagnostics() -> [String] {
+        inspector.diagnostics()
+    }
+
     public func capture(named name: String?) async {
         guard let capturer else { return }
 
@@ -135,7 +164,7 @@ public final class WorkspacesFeature: Feature {
         defer { isBusy = false }
 
         do {
-            let snapshot = try capturer.capture(name: name ?? Self.defaultName())
+            let snapshot = try await capturer.capture(name: name ?? Self.defaultName())
             try store.save(snapshot)
             reload()
 

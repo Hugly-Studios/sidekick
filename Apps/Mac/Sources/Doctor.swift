@@ -132,9 +132,27 @@ enum Doctor {
         print("")
     }
 
+    /// Asks the running app rather than trusting this process: permissions are
+    /// attributed to whoever started the binary, so a copy launched from a terminal
+    /// reports the terminal's access, not the app's.
     private static func permissionsSection() {
         print("permissions")
-        line("accessibility", AXIsProcessTrusted() ? "granted" : "not granted")
+
+        guard RemoteControl.isAppRunning,
+            let reply = RemoteControl.send(.status, timeout: 15)
+        else {
+            line("accessibility", AXIsProcessTrusted() ? "granted" : "not granted")
+            warn(
+                "measured for this terminal-started process, which is not what the app itself has",
+                fix: "open Sidekick, then run make doctor again"
+            )
+            print("")
+            return
+        }
+
+        for reportedLine in reply.split(separator: "\n") {
+            print("  \(reportedLine)")
+        }
         print("")
     }
 

@@ -5,14 +5,16 @@ import PrivateAPI
 
 /// Recreates a saved layout.
 ///
-/// Order of operations matters: apps are started first (their windows appear on
-/// whatever desktop is active), then windows are moved to the desktop they belong
-/// to, and only then resized — a window resized before the move gets clamped to
-/// the wrong desktop's geometry.
+/// Order of operations is dictated by two macOS facts: new windows open on the
+/// desktop that is active, and Accessibility only exposes windows of the visible
+/// desktop. So apps are started first, then for every desktop in turn the app
+/// goes there, moves the windows that belong there, and only then resizes them —
+/// a window resized before the move gets clamped to the wrong desktop's geometry.
 @MainActor
 public struct SnapshotRestorer {
     private let spaces: any SpacesReading
     private let mover: any WindowSpaceMoving
+    private let navigator: any SpaceNavigating
     private let inspector: WindowInspector
     private let arranger: WindowArranger
     private let launcher: AppLauncher
@@ -20,12 +22,14 @@ public struct SnapshotRestorer {
     public init(
         spaces: any SpacesReading,
         mover: any WindowSpaceMoving,
+        navigator: any SpaceNavigating,
         inspector: WindowInspector = WindowInspector(),
         arranger: WindowArranger = WindowArranger(),
         launcher: AppLauncher = AppLauncher()
     ) {
         self.spaces = spaces
         self.mover = mover
+        self.navigator = navigator
         self.inspector = inspector
         self.arranger = arranger
         self.launcher = launcher
@@ -66,7 +70,8 @@ public struct SnapshotRestorer {
         var report = RestoreReport()
 
         for bundleID in Self.bundleIDs(of: snapshot) {
-            let wasRunning = !inspector.windows(ofBundleID: bundleID).isEmpty
+            let wasRunning = !NSRunningApplication
+                .runningApplications(withBundleIdentifier: bundleID).isEmpty
 
             do {
                 try await launcher.ensureWindows(bundleID: bundleID)
@@ -91,22 +96,16 @@ public struct SnapshotRestorer {
 
     // MARK: - Layout
 
-    /// Matching happens once for the whole display: doing it per desktop would let
-    /// two desktops claim the same live window and the second move would undo the
-    /// first.
     private func restore(display: DisplaySnapshot, onto target: DisplaySpaces) async -> RestoreReport
     {
         var report = RestoreReport()
 
-        let live = (try? inspector.windows()) ?? []
-        let liveByID = Dictionary(live.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let (candidates, live) = await survey(display: target, report: &report)
+
+        // Matching happens once for the whole display: doing it per desktop would
+        // let two desktops claim the same window.
         let entries = display.spaces.flatMap { space in space.windows.map { (space.index, $0) } }
-        let pairs = WindowMatcher.pair(
-            snapshots: entries.map(\.1),
-            candidates: live.map {
-                MatchCandidate(id: $0.id, bundleID: $0.bundleID, title: $0.title)
-            }
-        )
+        let pairs = WindowMatcher.pair(snapshots: entries.map(\.1), candidates: candidates)
 
         for space in display.spaces {
             guard let targetSpace = target.spaces.first(where: { $0.index == space.index }) else {
@@ -118,12 +117,22 @@ public struct SnapshotRestorer {
             var matched: [(snapshot: WindowSnapshot, window: LiveWindow)] = []
 
             for (offset, entry) in entries.enumerated() where entry.0 == space.index {
-                guard let windowID = pairs[offset], let window = liveByID[windowID] else {
+                guard let windowID = pairs[offset], let window = live[windowID] else {
                     report.problems.append("Окно «\(entry.1.appName)» не найдено")
                     continue
                 }
 
                 matched.append((entry.1, window))
+            }
+
+            guard !matched.isEmpty else { continue }
+
+            do {
+                try await navigator.activate(
+                    spaceID: targetSpace.id, displayUUID: target.displayUUID)
+            } catch {
+                report.problems.append(error.localizedDescription)
+                continue
             }
 
             report.merge(await move(matched, toSpace: targetSpace.id))
@@ -133,7 +142,56 @@ public struct SnapshotRestorer {
             }
         }
 
+        await returnToActiveSpace(of: display, on: target, report: &report)
+
         return report
+    }
+
+    /// Collects every window that exists right now by visiting each desktop:
+    /// Accessibility hides windows of desktops that are not visible, so without
+    /// the walk most windows could not be identified at all.
+    private func survey(
+        display: DisplaySpaces,
+        report: inout RestoreReport
+    ) async -> ([MatchCandidate], [CGWindowID: LiveWindow]) {
+        var candidates: [MatchCandidate] = []
+        var live: [CGWindowID: LiveWindow] = [:]
+
+        for space in display.spaces {
+            do {
+                try await navigator.activate(spaceID: space.id, displayUUID: display.displayUUID)
+            } catch {
+                report.problems.append(error.localizedDescription)
+                continue
+            }
+
+            let identifiers = Set(spaces.windowIDs(onSpace: space.id))
+
+            for window in (try? inspector.windows(withIDs: identifiers)) ?? []
+            where live[window.id] == nil {
+                live[window.id] = window
+                candidates.append(
+                    MatchCandidate(id: window.id, bundleID: window.bundleID, title: window.title))
+            }
+        }
+
+        return (candidates, live)
+    }
+
+    private func returnToActiveSpace(
+        of display: DisplaySnapshot,
+        on target: DisplaySpaces,
+        report: inout RestoreReport
+    ) async {
+        guard let activeIndex = display.spaces.first(where: \.isActive)?.index,
+            let space = target.spaces.first(where: { $0.index == activeIndex })
+        else { return }
+
+        do {
+            try await navigator.activate(spaceID: space.id, displayUUID: target.displayUUID)
+        } catch {
+            report.problems.append(error.localizedDescription)
+        }
     }
 
     /// Fullscreen windows own their own space and cannot be moved into another.

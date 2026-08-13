@@ -56,6 +56,15 @@ fmt: ## Reformat sources
 doctor: ## Report how the app is installed and whether it is reachable
 	@scripts/doctor.sh
 
+snapshots: ## List saved desktop layouts
+	@scripts/sidekick.sh --snapshots
+
+snapshot: ## Save the current desktop layout (NAME=... optional)
+	@scripts/sidekick.sh --capture $(NAME)
+
+restore: ## Restore a layout (NAME=... or the default one)
+	@scripts/sidekick.sh --restore $(NAME)
+
 install: ## Build Release and install to /Applications
 	scripts/install.sh
 
