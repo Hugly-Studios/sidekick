@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Cache Tuist
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/sidekick/tuist
+          key: tuist-${{ hashFiles('.tuist-version') }}
+
+      - name: Install Tuist
+        run: echo "TUIST=$(scripts/install-tuist.sh)" >> "$GITHUB_ENV"
+
+      - name: Generate project
+        run: "$TUIST" generate --no-open
+
+      - name: Build and test
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace Sidekick.xcworkspace \
+            -scheme Sidekick \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -quiet \
+            test
+
+  format:
+    name: Format
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Lint formatting
+        run: |
+          xcrun swift-format lint --strict --recursive --parallel \
+            Apps Core Tuist Project.swift Tuist.swift

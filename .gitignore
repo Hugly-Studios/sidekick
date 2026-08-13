@@ -1,0 +1,16 @@
+# Tuist-generated
+*.xcodeproj
+*.xcworkspace
+.tuist/
+Derived/
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Local signing identity override
+Config/Signing.local.xcconfig
+
+.DS_Store

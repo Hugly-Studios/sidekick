@@ -1,0 +1,8 @@
+// Copy to Signing.local.xcconfig (gitignored) to sign with your own identity.
+// A stable signature keeps macOS permission grants across rebuilds.
+//
+// Find your team id and identity name with:
+//   security find-identity -v -p codesigning
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = Apple Development
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
