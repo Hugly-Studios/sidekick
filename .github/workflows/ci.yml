@@ -29,7 +29,8 @@ jobs:
         run: echo "TUIST=$(scripts/install-tuist.sh)" >> "$GITHUB_ENV"
 
       - name: Generate project
-        run: "$TUIST" generate --no-open
+        run: |
+          "$TUIST" generate --no-open
 
       - name: Build and test
         run: |
