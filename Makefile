@@ -24,6 +24,10 @@ setup: ## First run: tools, signing, dependencies, Xcode project
 generate: ## Regenerate the Xcode project (needed after adding a module)
 	scripts/version.sh
 	$(MISE) tuist generate --no-open
+	@mkdir -p $(DERIVED)/Build/Products/Debug $(DERIVED)/Build/Products/Release
+	@touch $(DERIVED)/.metadata_never_index
+	@touch $(DERIVED)/Build/Products/Debug/.metadata_never_index
+	@touch $(DERIVED)/Build/Products/Release/.metadata_never_index
 
 xcode: ## Regenerate and open in Xcode
 	scripts/version.sh

@@ -22,25 +22,26 @@ struct SidekickApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        MenuBarExtra("Sidekick", systemImage: "square.grid.2x2") {
-            MenuBarContent(
-                environment: appDelegate.environment,
-                settingsWindow: appDelegate.settingsWindow
-            )
+        Settings {
+            SettingsRootView(environment: appDelegate.environment)
         }
-        .menuBarExtraStyle(.menu)
     }
 }
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let environment = AppEnvironment()
-    lazy var settingsWindow = SettingsWindowController(environment: environment)
+    lazy var settingsWindow = SettingsWindowController()
 
     private var controlServer: ControlServer?
+    private var menuBar: MenuBarController?
     private static let hasShownWelcomeKey = SettingKey("hasShownWelcome", default: false)
 
     func applicationDidFinishLaunching(_: Notification) {
+        menuBar = MenuBarController(
+            environment: environment,
+            settingsWindow: settingsWindow
+        )
         startControlServer()
 
         Task {
@@ -76,7 +77,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startControlServer() {
         let handler = AppControlHandler(
             environment: environment,
-            permissions: environment.permissions
+            permissions: environment.permissions,
+            menuBar: menuBar
         )
 
         let server = ControlServer(handler: handler)

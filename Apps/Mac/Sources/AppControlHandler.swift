@@ -8,10 +8,16 @@ import PermissionsKit
 final class AppControlHandler: ControlHandling {
     private let environment: AppEnvironment
     private let permissions: LivePermissionChecker
+    private let menuBar: MenuBarController?
 
-    init(environment: AppEnvironment, permissions: LivePermissionChecker) {
+    init(
+        environment: AppEnvironment,
+        permissions: LivePermissionChecker,
+        menuBar: MenuBarController?
+    ) {
         self.environment = environment
         self.permissions = permissions
+        self.menuBar = menuBar
     }
 
     func status() async -> StatusPayload {
@@ -82,7 +88,11 @@ final class AppControlHandler: ControlHandling {
     }
 
     func doctor() async -> DoctorPayload {
-        await DoctorReport.build(environment: environment, permissions: permissions)
+        await DoctorReport.build(
+            environment: environment,
+            permissions: permissions,
+            menuBar: menuBar
+        )
     }
 
     func quit() {

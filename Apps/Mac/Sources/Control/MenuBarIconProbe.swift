@@ -12,6 +12,9 @@ enum MenuBarIconProbe {
     /// Fills in the part of a doctor report that only this process can answer.
     static func annotate(_ payload: DoctorPayload) -> DoctorPayload {
         var payload = payload
+        if !payload.menuBarIcon.isEmpty {
+            return payload
+        }
 
         switch placement() {
         case .visible(let x):
