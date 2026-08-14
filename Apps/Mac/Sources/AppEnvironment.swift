@@ -3,6 +3,7 @@ import HotkeysKit
 import OSLog
 import Observation
 import PermissionsKit
+import Sounds
 import Workspaces
 
 /// Wires the kernel together and holds the list of features the app ships with.
@@ -44,6 +45,6 @@ final class AppEnvironment {
     /// The single place where a new feature module is plugged in.
     /// See docs/adding-a-feature.md.
     static var featureTypes: [any Feature.Type] {
-        [WorkspacesFeature.self]
+        [SoundsFeature.self, WorkspacesFeature.self]
     }
 }

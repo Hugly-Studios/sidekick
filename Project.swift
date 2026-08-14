@@ -36,6 +36,9 @@ let project = Project(
                 "CFBundleShortVersionString": "$(MARKETING_VERSION)",
                 "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
                 "NSHumanReadableCopyright": .string("© \(Sidekick.organizationName)"),
+                "NSAudioCaptureUsageDescription": .string(
+                    "Sidekick глушит звук выбранного приложения, не записывая его."
+                ),
             ]),
             buildableFolders: ["Apps/Mac/Sources"],
             copyFiles: [
@@ -51,6 +54,7 @@ let project = Project(
                 .target(name: "HotkeysKit"),
                 .target(name: "PermissionsKit"),
                 .target(name: "SystemKit"),
+                .target(name: "Sounds"),
                 .target(name: "Workspaces"),
             ],
             settings: .settings(
@@ -106,6 +110,14 @@ let project = Project(
             ]
         )
         + Module.feature(
+            "Sounds",
+            dependencies: [
+                .target(name: "SystemKit"),
+                .target(name: "PermissionsKit"),
+            ],
+            testDependencies: [.target(name: "TestSupport")]
+        )
+        + Module.feature(
             "Workspaces",
             dependencies: [
                 .target(name: "Automation"),
@@ -124,6 +136,7 @@ let project = Project(
                 .testableTarget(target: .target("SystemKitTests")),
                 .testableTarget(target: .target("PermissionsKitTests")),
                 .testableTarget(target: .target("ControlSurfaceTests")),
+                .testableTarget(target: .target("SoundsTests")),
                 .testableTarget(target: .target("WorkspacesTests")),
             ]),
             runAction: .runAction(executable: .target(Sidekick.appName))

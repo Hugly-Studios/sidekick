@@ -10,7 +10,8 @@ enum DoctorReport {
     @MainActor
     static func build(
         environment: AppEnvironment?,
-        permissions: LivePermissionChecker
+        permissions: LivePermissionChecker,
+        menuBar: MenuBarController? = nil
     ) async -> DoctorPayload {
         let info = Bundle.main.infoDictionary
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"
@@ -50,6 +51,15 @@ enum DoctorReport {
             )
         }
 
+        var menuBarIcon = ""
+        if let menuBar {
+            let report = menuBar.iconReport()
+            menuBarIcon = report.icon
+            if let warning = report.warning {
+                warnings.append(warning)
+            }
+        }
+
         return DoctorPayload(
             bundleID: Bundle.main.bundleIdentifier ?? "com.hugly.sidekick",
             version: version,
@@ -59,8 +69,8 @@ enum DoctorReport {
             signingKind: signing.kind,
             loginItem: login,
             shortcut: shortcut,
-            // Left to the CLI: see MenuBarIconProbe.
-            menuBarIcon: "",
+            // Empty means the CLI still has to probe; see MenuBarIconProbe.
+            menuBarIcon: menuBarIcon,
             permissions: permissionInfos,
             warnings: warnings,
             running: environment != nil

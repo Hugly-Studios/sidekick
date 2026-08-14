@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Модуль Sounds: кто держит аудиовыход, история коротких звуков, mute одного приложения через Process Tap.
 - Тулчейн на mise: tuist, swiftlint, xcbeautify, lefthook, actionlint.
 - `make verify` — единые ворота: формат, безопасность, сборка, тесты.
 - Источники модулей через `buildableFolders`; Swift 6.2, approachable concurrency, hardened runtime.

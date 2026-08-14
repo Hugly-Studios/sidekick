@@ -2,7 +2,7 @@
 
 ## Что гоняем
 
-- Swift Testing в юнит-таргетах: `AppCore`, `PrivateAPI`, `SystemKit`, `PermissionsKit`, `ControlSurface`, `Workspaces`.
+- Swift Testing в юнит-таргетах: `AppCore`, `PrivateAPI`, `SystemKit`, `PermissionsKit`, `ControlSurface`, `Workspaces`, `Sounds`.
 - `make verify` — формат, SwiftLint (только безопасность), сборка, тесты. Единственные ворота PR.
 - `scripts/smoke.sh` — установленное приложение отвечает на CLI.
 

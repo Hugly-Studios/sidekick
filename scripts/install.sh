@@ -21,6 +21,8 @@ team_of() {
 
 scripts/version.sh
 mise exec -- tuist generate --no-open >/dev/null
+mkdir -p "$repo_root/build"
+touch "$repo_root/build/.metadata_never_index"
 
 xcodebuild \
 	-workspace "$app_name.xcworkspace" \
@@ -71,6 +73,24 @@ done <<<"$copies"
 rm -rf "$destination"
 cp -R "$built_app" "$destination"
 xattr -dr com.apple.quarantine "$destination" 2>/dev/null || true
+
+# Build products stay on disk for the next compile, but Launch Services and
+# Spotlight must not list them next to /Applications/Sidekick.app.
+touch "$repo_root/build/Build/Products/Debug/.metadata_never_index" 2>/dev/null || true
+touch "$repo_root/build/Build/Products/Release/.metadata_never_index" 2>/dev/null || true
+lsregister="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+for extra in \
+	"$repo_root/build/Build/Products/Debug/$app_name.app" \
+	"$repo_root/build/Build/Products/Release/$app_name.app"
+do
+	if [[ -d "$extra" ]]; then
+		"$lsregister" -u "$extra" >/dev/null 2>&1 || true
+	fi
+done
+"$lsregister" -f "$destination" >/dev/null 2>&1 || true
+# Spotlight already indexed the Release bundle we just copied from.
+# Removing it leaves only /Applications in the index; the next build recreates it.
+rm -rf "$built_app"
 
 version="$(defaults read "$destination/Contents/Info.plist" CFBundleShortVersionString)"
 build_number="$(defaults read "$destination/Contents/Info.plist" CFBundleVersion)"

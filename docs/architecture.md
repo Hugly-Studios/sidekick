@@ -11,14 +11,14 @@ Kernel:      CommandRegistry   FeatureRegistry   EventBus   SettingsStore
                               |
 Seams:       SystemKit   PermissionsKit   ControlSurface   TestSupport
                               |
-Features:    Workspaces   Awake   Dictation   Messages   ...
+Features:    Workspaces   Sounds   Awake   Dictation   Messages   ...
 ```
 
 ## Модули репозитория
 
 - `Core/AppCore` — контракт `Feature`, реестры, шина событий, настройки, словарь `PermissionKind`.
 - `Core/ControlSurface` — Codable-протокол, Unix-сокет CLI ↔ GUI, `LogReader` через `OSLogStore`.
-- `Core/SystemKit` — `Clock`, `WorkspaceObserving`, `PowerState`, `UserNotifying`, `Pasteboarding`, `FileWatching`.
+- `Core/SystemKit` — `Clock`, `WorkspaceObserving`, `PowerState`, `UserNotifying`, `Pasteboarding`, `FileWatching`, `AudioOutputObserving`, `AudioProcessMuting`, `RunningApplications`.
 - `Core/PermissionsKit` — живая проверка и запрос TCC, deep-link в System Settings.
 - `Core/TestSupport` — фейки, линкуются только тестами.
 - `Core/PrivateAPI` / `Automation` / `HotkeysKit` — системные швы Workspaces и оболочки.

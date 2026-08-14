@@ -22,13 +22,10 @@ struct SidekickApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        MenuBarExtra("Sidekick", systemImage: "square.grid.2x2") {
-            MenuBarContent(
-                environment: appDelegate.environment,
-                settingsWindow: appDelegate.settingsWindow
-            )
+        // The status item is owned by AppDelegate so we can pin it visible.
+        Settings {
+            EmptyView()
         }
-        .menuBarExtraStyle(.menu)
     }
 }
 
@@ -38,9 +35,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     lazy var settingsWindow = SettingsWindowController(environment: environment)
 
     private var controlServer: ControlServer?
+    private var menuBar: MenuBarController?
     private static let hasShownWelcomeKey = SettingKey("hasShownWelcome", default: false)
 
     func applicationDidFinishLaunching(_: Notification) {
+        menuBar = MenuBarController(
+            environment: environment,
+            settingsWindow: settingsWindow
+        )
         startControlServer()
 
         Task {
@@ -76,7 +78,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startControlServer() {
         let handler = AppControlHandler(
             environment: environment,
-            permissions: environment.permissions
+            permissions: environment.permissions,
+            menuBar: menuBar
         )
 
         let server = ControlServer(handler: handler)
