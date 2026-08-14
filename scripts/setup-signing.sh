@@ -17,10 +17,16 @@ fi
 # The team id is the certificate's OU. The value in parentheses in the identity
 # name ("Apple Development: Name (XXXXXXXXXX)") is the user id and signing with
 # it fails with a misleading "no Mac Development certificate found".
-team="$(security find-certificate -c "Apple Development" -p 2>/dev/null |
-	openssl x509 -noout -subject 2>/dev/null |
-	sed -n 's/.*OU *= *\([A-Z0-9]*\).*/\1/p' |
-	head -1)"
+#
+# `security find-certificate` exits non-zero when the identity is missing;
+# do not let pipefail skip the ad-hoc fallback below.
+team=""
+if pem="$(security find-certificate -c "Apple Development" -p 2>/dev/null)"; then
+	team="$(printf '%s\n' "$pem" |
+		openssl x509 -noout -subject 2>/dev/null |
+		sed -n 's/.*OU *= *\([A-Z0-9]*\).*/\1/p' |
+		head -1 || true)"
+fi
 
 if [[ -z "$team" ]]; then
 	echo "signing: no Apple Development identity found, keeping ad-hoc signing"
