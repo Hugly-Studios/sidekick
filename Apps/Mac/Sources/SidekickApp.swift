@@ -22,9 +22,8 @@ struct SidekickApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        // The status item is owned by AppDelegate so we can pin it visible.
         Settings {
-            EmptyView()
+            SettingsRootView(environment: appDelegate.environment)
         }
     }
 }
@@ -32,7 +31,7 @@ struct SidekickApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let environment = AppEnvironment()
-    lazy var settingsWindow = SettingsWindowController(environment: environment)
+    lazy var settingsWindow = SettingsWindowController()
 
     private var controlServer: ControlServer?
     private var menuBar: MenuBarController?
