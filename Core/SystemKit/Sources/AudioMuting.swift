@@ -59,6 +59,12 @@ public final class LiveAudioProcessMuter: AudioProcessMuting, @unchecked Sendabl
         do {
             let aggregateID = try createAggregate(tapID: tapID)
             lock.lock()
+            if sessions[pid] != nil {
+                lock.unlock()
+                AudioHardwareDestroyAggregateDevice(aggregateID)
+                AudioHardwareDestroyProcessTap(tapID)
+                return
+            }
             sessions[pid] = Session(tapID: tapID, aggregateID: aggregateID)
             lock.unlock()
             installDeviceListener()
@@ -83,6 +89,7 @@ public final class LiveAudioProcessMuter: AudioProcessMuting, @unchecked Sendabl
         for session in all {
             session.tearDown()
         }
+        removeDeviceListener()
     }
 
     private func createTap(for processObject: AudioObjectID) throws -> AudioObjectID {

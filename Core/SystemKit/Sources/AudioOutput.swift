@@ -97,6 +97,7 @@ private final class OutputListenSession: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.hugly.sidekick.audio-output")
     private let lock = NSLock()
     private var running: [AudioObjectID: AudioOutputProcess] = [:]
+    private var watched: Set<AudioObjectID> = []
     private var processBlock: AudioObjectPropertyListenerBlock?
     private var listBlock: AudioObjectPropertyListenerBlock?
     private var listenStartedAt: [AudioObjectID: Date] = [:]
@@ -153,23 +154,24 @@ private final class OutputListenSession: @unchecked Sendable {
             )
         }
         if let processBlock {
-            for objectID in running.keys {
+            for objectID in watched {
                 removeProcessListeners(objectID, block: processBlock)
             }
         }
         listBlock = nil
         processBlock = nil
         running.removeAll()
+        watched.removeAll()
         listenStartedAt.removeAll()
         started = false
     }
 
     private func refresh(emitTransitions: Bool) {
         let ids = Set(HAL.processObjectIDs())
-        let known = Set(running.keys)
         guard let processBlock else { return }
 
-        for objectID in ids.subtracting(known) {
+        for objectID in ids.subtracting(watched) {
+            watched.insert(objectID)
             listenStartedAt[objectID] = Date()
             addProcessListeners(objectID, block: processBlock)
             if let current = HAL.process(id: objectID) {
@@ -177,8 +179,9 @@ private final class OutputListenSession: @unchecked Sendable {
             }
         }
 
-        for objectID in known.subtracting(ids) {
+        for objectID in watched.subtracting(ids) {
             removeProcessListeners(objectID, block: processBlock)
+            watched.remove(objectID)
             listenStartedAt.removeValue(forKey: objectID)
             if let previous = running.removeValue(forKey: objectID), previous.isRunningOutput {
                 publish(.stopped, previous)
@@ -235,7 +238,6 @@ private final class OutputListenSession: @unchecked Sendable {
         block: @escaping AudioObjectPropertyListenerBlock
     ) {
         addListener(object: objectID, selector: kAudioProcessPropertyIsRunningOutput, block: block)
-        addListener(object: objectID, selector: kAudioProcessPropertyIsRunning, block: block)
     }
 
     private func removeProcessListeners(
@@ -247,7 +249,6 @@ private final class OutputListenSession: @unchecked Sendable {
             selector: kAudioProcessPropertyIsRunningOutput,
             block: block
         )
-        removeListener(object: objectID, selector: kAudioProcessPropertyIsRunning, block: block)
     }
 
     private func publish(_ kind: AudioOutputChange.Kind, _ process: AudioOutputProcess) {
