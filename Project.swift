@@ -6,13 +6,19 @@ let project = Project(
     organizationName: Sidekick.organizationName,
     settings: .settings(
         base: [
-            "SWIFT_VERSION": "6.0",
-            "MARKETING_VERSION": "0.1.0",
-            "CURRENT_PROJECT_VERSION": "1",
+            "SWIFT_VERSION": "6.2",
+            "SWIFT_APPROACHABLE_CONCURRENCY": "YES",
+            "ENABLE_HARDENED_RUNTIME": "YES",
         ],
         configurations: [
-            .debug(name: "Debug", xcconfig: "Config/Signing.xcconfig"),
-            .release(name: "Release", xcconfig: "Config/Signing.xcconfig"),
+            .debug(
+                name: "Debug",
+                xcconfig: "Config/Signing.xcconfig"
+            ),
+            .release(
+                name: "Release",
+                xcconfig: "Config/Signing.xcconfig"
+            ),
         ]
     ),
     targets: [
@@ -31,7 +37,7 @@ let project = Project(
                 "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
                 "NSHumanReadableCopyright": .string("© \(Sidekick.organizationName)"),
             ]),
-            sources: ["Apps/Mac/Sources/**"],
+            buildableFolders: ["Apps/Mac/Sources"],
             copyFiles: [
                 .wrapper(
                     name: "Embed Launch Agent",
@@ -41,36 +47,71 @@ let project = Project(
             ],
             dependencies: [
                 .target(name: "AppCore"),
+                .target(name: "ControlSurface"),
                 .target(name: "HotkeysKit"),
+                .target(name: "PermissionsKit"),
+                .target(name: "SystemKit"),
                 .target(name: "Workspaces"),
             ],
-            settings: .settings(base: [
-                // Indirection through Config/Signing.xcconfig so a gitignored
-                // local file can pin a stable identity per machine.
-                "CODE_SIGN_STYLE": "$(SIDEKICK_CODE_SIGN_STYLE)",
-                "CODE_SIGN_IDENTITY": "$(SIDEKICK_CODE_SIGN_IDENTITY)",
-                "DEVELOPMENT_TEAM": "$(SIDEKICK_DEVELOPMENT_TEAM)",
-            ])
+            settings: .settings(
+                base: [
+                    // Indirection through Config/Signing.xcconfig so a gitignored
+                    // local file can pin a stable identity per machine.
+                    "CODE_SIGN_STYLE": "$(SIDEKICK_CODE_SIGN_STYLE)",
+                    "CODE_SIGN_IDENTITY": "$(SIDEKICK_CODE_SIGN_IDENTITY)",
+                    "DEVELOPMENT_TEAM": "$(SIDEKICK_DEVELOPMENT_TEAM)",
+                ].merging(Module.compilerSettings(isolation: .mainActor)) { _, new in new }
+            )
         )
     ]
-        + Module.core("AppCore")
+        + Module.core(
+            "AppCore",
+            testDependencies: [.target(name: "TestSupport")],
+            isolation: .mainActor
+        )
         + Module.core("PrivateAPI")
         + Module.core(
             "HotkeysKit",
             dependencies: [.external(name: "KeyboardShortcuts")],
-            hasTests: false
+            hasTests: false,
+            isolation: .mainActor
         )
         + Module.core(
             "Automation",
             dependencies: [.target(name: "PrivateAPI")],
             hasTests: false
         )
+        + Module.core(
+            "SystemKit",
+            dependencies: [.target(name: "AppCore")]
+        )
+        + Module.core(
+            "PermissionsKit",
+            dependencies: [.target(name: "AppCore")]
+        )
+        + Module.core(
+            "ControlSurface",
+            dependencies: [
+                .target(name: "AppCore"),
+                .target(name: "PermissionsKit"),
+            ],
+            testDependencies: [.target(name: "TestSupport")]
+        )
+        + Module.testSupport(
+            "TestSupport",
+            dependencies: [
+                .target(name: "AppCore"),
+                .target(name: "SystemKit"),
+                .target(name: "PermissionsKit"),
+            ]
+        )
         + Module.feature(
             "Workspaces",
             dependencies: [
                 .target(name: "Automation"),
                 .target(name: "PrivateAPI"),
-            ]
+            ],
+            testDependencies: [.target(name: "TestSupport")]
         ),
     schemes: [
         .scheme(
@@ -80,6 +121,9 @@ let project = Project(
             testAction: .targets([
                 .testableTarget(target: .target("AppCoreTests")),
                 .testableTarget(target: .target("PrivateAPITests")),
+                .testableTarget(target: .target("SystemKitTests")),
+                .testableTarget(target: .target("PermissionsKitTests")),
+                .testableTarget(target: .target("ControlSurfaceTests")),
                 .testableTarget(target: .target("WorkspacesTests")),
             ]),
             runAction: .runAction(executable: .target(Sidekick.appName))

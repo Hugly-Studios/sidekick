@@ -1,0 +1,21 @@
+---
+description: No dead code, backward compatibility shims, or speculative features. Always cut cleanly.
+alwaysApply: true
+---
+
+# No Dead Code
+
+Every line in the codebase must serve the **current** architecture. Do not keep code around "just in case", for backward compatibility, or for a future that hasn't been decided yet.
+
+## What Counts as Dead Code
+
+- Backward-compatibility handlers kept "in case someone still uses them"
+- Feature flags for unfinished work
+- Commented-out code
+- Unused types, functions, imports, variables
+- Speculative abstractions — interfaces with one implementation "for extensibility"
+- Fallback paths that never trigger
+
+## When You're Replacing Something
+
+Add the new path, delete the old path, update all callers in the same change. Do not leave `*Legacy` copies.

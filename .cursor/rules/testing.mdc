@@ -1,0 +1,14 @@
+---
+description: How to write tests for Sidekick modules
+globs: "**/Tests/**"
+alwaysApply: false
+---
+
+# Testing
+
+- Swift Testing (`@Test`), not XCTest.
+- Use `TestSupport`: `FakeClock`, `InMemorySettingsStore`, `FakePermissions`, `RecordingEventBus`, `TestFeatureContext.make()`.
+- Do not hit live TCC, IOKit, Accessibility or the pasteboard in a unit test.
+- ControlSurface: codec and router are unit-tested; the socket is an in-process temp-path test. No launchd, no codesign in unit tests.
+- Do not add XCUITest. Menu-bar apps fail on headless CI before tests start. See `docs/testing.md`.
+- A feature that uses a private API must ship a symbol-resolve test.

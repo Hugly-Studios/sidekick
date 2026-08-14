@@ -11,7 +11,9 @@ struct WorkspacesMenuView: View {
         }
 
         if let snapshot = feature.defaultSnapshot {
-            Text("Снимок «\(snapshot.name)»: \(snapshot.spaceCount) столов, \(snapshot.windowCount) окон")
+            Text(
+                "Снимок «\(snapshot.name)»: \(snapshot.spaceCount) столов, \(snapshot.windowCount) окон"
+            )
         } else {
             Text("Снимков пока нет")
         }

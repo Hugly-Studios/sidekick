@@ -2,43 +2,69 @@
 
 ## Принцип
 
-Фича объявляет возможности, оболочка их отображает. Модуль не знает про меню-бар, горячие клавиши, CLI и Shortcuts — он объявляет команды и панель настроек, а поверхности строятся над реестрами автоматически. Это то, что делает добавление N+1 модуля дешёвым.
+Фича объявляет возможности, оболочка их отображает. Модуль не знает про меню-бар, горячие клавиши, CLI и Shortcuts — он объявляет команды и панель настроек, а поверхности строятся над реестрами автоматически.
 
 ```
-Surfaces:   Menu bar   Hotkeys   Settings   (позже: CLI, App Intents)
-                 \        |         /
+Surfaces:   Menu bar   Hotkeys   Settings   CLI (sidekick)
+                 \        |         /          /
 Kernel:      CommandRegistry   FeatureRegistry   EventBus   SettingsStore
+                              |
+Seams:       SystemKit   PermissionsKit   ControlSurface   TestSupport
                               |
 Features:    Workspaces   Awake   Dictation   Messages   ...
 ```
 
 ## Модули репозитория
 
-- `Core/AppCore` — ядро: контракт `Feature`, реестры фич и команд, шина событий, настройки, логирование.
-- `Apps/Mac` — menu-bar приложение (`LSUIElement`): собирает ядро, держит список фич, рисует меню и окно настроек.
-- `Features/<Name>` — по модулю на возможность, зависят только от `AppCore`.
-- `Core/<Name>` — общая инфраструктура, которую переиспользуют несколько фич.
+- `Core/AppCore` — контракт `Feature`, реестры, шина событий, настройки, словарь `PermissionKind`.
+- `Core/ControlSurface` — Codable-протокол, Unix-сокет CLI ↔ GUI, `LogReader` через `OSLogStore`.
+- `Core/SystemKit` — `Clock`, `WorkspaceObserving`, `PowerState`, `UserNotifying`, `Pasteboarding`, `FileWatching`.
+- `Core/PermissionsKit` — живая проверка и запрос TCC, deep-link в System Settings.
+- `Core/TestSupport` — фейки, линкуются только тестами.
+- `Core/PrivateAPI` / `Automation` / `HotkeysKit` — системные швы Workspaces и оболочки.
+- `Apps/Mac` — menu-bar приложение и CLI.
+- `Features/<Name>` — один пользовательский модуль.
 
-Каждый модуль описывается фабриками из `Tuist/ProjectDescriptionHelpers/Module.swift`, идентификаторы и версия платформы — в `Constants.swift`. Новый модуль это одна строка в `Project.swift`.
+Каждый модуль описывается фабриками из `Tuist/ProjectDescriptionHelpers/Module.swift`. Источники — `buildableFolders`: `tuist generate` нужен при добавлении модуля, не файла.
+
+Конкурентность: `SWIFT_APPROACHABLE_CONCURRENCY` везде; `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` у приложения и фич; библиотеки `nonisolated`. `ENABLE_HARDENED_RUNTIME = YES`, sandbox выключен.
 
 ## Ядро
 
-**`Feature`** — контракт модуля: статический `descriptor` (id, название, иконка, требуемые разрешения), `activate()` / `deactivate()`, список `commands`, представления для меню и настроек. Всё системное приходит через `FeatureContext`, поэтому логика фичи тестируется без Accessibility, XPC и приватных API.
+**`Feature`** — статический `descriptor`, `activate()` / `deactivate()`, `commands`, представления. Системное приходит через `FeatureContext`.
 
-**`FeatureContext`** — зависимости фичи: настройки (уже с префиксом под id фичи, ключи не могут пересечься), шина событий, логгер с категорией по имени фичи.
+**`FeatureRegistry`** — владеет экземплярами, включённостью и жизненным циклом. Перед `activate()` проверяет `requiredPermissions` через `PermissionChecking`. Отказ — `FeatureActivationError.missingPermission`, команды не регистрируются.
 
-**`FeatureRegistry`** — владеет экземплярами фич, их состоянием включённости (хранится в настройках) и жизненным циклом. Если `activate()` бросает исключение, реестр запоминает причину и показывает её в настройках, а команды такой фичи не регистрируются: модуль без разрешения не ломает приложение.
+**`CommandRegistry`** — команды активных фич. `run` возвращает `String` для CLI; меню вызывает `runDetached`.
 
-**`CommandRegistry`** — все команды активных фич с указанием владельца. Поверхности читают отсюда, а ошибки выполнения логируются в одном месте.
+**`EventBus`** — типизированный broadcast между фичами без прямых зависимостей.
 
-**`EventBus`** — типизированный broadcast, чтобы фичи реагировали друг на друга без прямых зависимостей: например, `Messages` публикует «получен код», а модуль работы с буфером обмена его слушает.
+**`SettingsStore`** — типизированные ключи. CLI ходит через `inspect` / `write`.
 
-**`SettingsStore`** — типизированные ключи со значением по умолчанию. Нативные для `UserDefaults` типы пишутся как есть, чтобы состояние оставалось читаемым через `defaults read`, всё остальное — JSON.
+## Control Surface
+
+Протокол `ControlRequest` / `ControlResponse` общий. Транспорт сейчас один: Unix-сокет `~/Library/Application Support/com.hugly.sidekick/cli.sock` (каталог `0700`, сокет `0600`). Клиент проверяется `getpeereid()` и `LOCAL_PEERTOKEN` → `SecCodeCheckValidity` по Team ID. Рядом pid-файл, чтобы отличить «не запущено» от «сокет от упавшего процесса».
+
+XPC зарезервирован для GUI ↔ root-демон (Awake). Между двумя приложениями Mach-сервис не работает вне Xcode.
+
+`DistributedNotificationCenter` больше не используется.
 
 ## Разрешения
 
-`PermissionKind` в `AppCore` задаёт словарь разрешений, а проверка и запрос будут в `Core/PermissionsKit`. Фича перечисляет требуемые разрешения в дескрипторе, оболочка агрегирует их по включённым модулям.
+`PermissionKind` живёт в `AppCore`. `LivePermissionChecker` реализует статус, запрос и `settingsURL`. `sidekick doctor --json` показывает картину целиком.
 
-## Жизненный цикл приложения
+## Внедрение зависимостей
 
-`AppDelegate` создаёт `AppEnvironment`, после запуска активирует включённые фичи, а при выходе возвращает `.terminateLater` и даёт фичам дождаться `deactivate()`. Модули, которые меняют системное состояние, всё равно не должны рассчитывать на корректное завершение — для них предусмотрены собственные страховки (например, watchdog в привилегированном хелпере).
+```swift
+public convenience init(context: FeatureContext) {
+    self.init(context: context, clock: SystemClock())
+}
+
+init(context: FeatureContext, clock: some Clock) { … }
+```
+
+`WorkspacesFeature` — эталон: spaces / navigator / inspector / store передаются в designated init.
+
+## Жизненный цикл
+
+`AppDelegate` поднимает `ControlServer`, активирует включённые фичи, при выходе вызывает `deactivate()` и гасит сокет.

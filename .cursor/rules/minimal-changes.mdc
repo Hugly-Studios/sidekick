@@ -1,0 +1,38 @@
+---
+description: Do not make changes beyond what the current task requires — no cosmetic fixes, speculative refactors, or "while we're here" improvements
+alwaysApply: true
+---
+
+# Minimal Changes — Do Not Invent Work
+
+Change **only** what is directly necessary to complete the user's request. Every line in the diff must serve the stated task. If removing a change would still leave the task fully solved — that change should not exist.
+
+## Decision Test
+
+Before including any modification, ask:
+
+> "If I remove this change, is the task still complete?"
+
+**Yes** → do not include it. **No** → include it.
+
+## Simplicity in New Code
+
+When writing new code (not modifying existing), use the minimum implementation that solves the problem. No speculative features, no abstractions for single-use code, no unnecessary indirection.
+
+## Gratuitous Changes — Do Not Make
+
+- Renaming variables, functions, or types "for clarity" when they are not part of the task
+- Reordering imports, struct fields, function arguments, or file sections
+- Extracting helpers, utilities, or abstractions "for the future" when used once
+- Replacing a working construct with a "more idiomatic" alternative
+- Adding comments, type annotations, or logging unrelated to the task
+- Changing formatting or whitespace beyond the lines being edited
+- Splitting or merging files that the task does not require touching
+
+## Spotting Nearby Issues
+
+If you notice a genuine problem in adjacent code:
+
+1. **Do not fix it silently.** Complete the current task first.
+2. **Mention it** to the user after the main response — briefly, with location and nature of the issue.
+3. **Fix it only if the user asks.**

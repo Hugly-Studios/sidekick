@@ -54,8 +54,9 @@ public enum WindowMatcher {
             case .partialTitle:
                 guard snapshot.title.count >= Self.minimumPartialLength else { return nil }
                 return candidates.firstIndex {
-                    $0.title.contains(snapshot.title) || snapshot.title.contains($0.title)
-                        && !$0.title.isEmpty
+                    $0.title.contains(snapshot.title)
+                        || snapshot.title.contains($0.title)
+                            && !$0.title.isEmpty
                 }
             case .order:
                 return candidates.isEmpty ? nil : 0

@@ -70,7 +70,8 @@ public struct SnapshotRestorer {
         var report = RestoreReport()
 
         for bundleID in Self.bundleIDs(of: snapshot) {
-            let wasRunning = !NSRunningApplication
+            let wasRunning =
+                !NSRunningApplication
                 .runningApplications(withBundleIdentifier: bundleID).isEmpty
 
             do {
@@ -96,7 +97,8 @@ public struct SnapshotRestorer {
 
     // MARK: - Layout
 
-    private func restore(display: DisplaySnapshot, onto target: DisplaySpaces) async -> RestoreReport
+    private func restore(display: DisplaySnapshot, onto target: DisplaySpaces) async
+        -> RestoreReport
     {
         var report = RestoreReport()
 
@@ -110,7 +112,8 @@ public struct SnapshotRestorer {
         for space in display.spaces {
             guard let targetSpace = target.spaces.first(where: { $0.index == space.index }) else {
                 report.problems.append(
-                    "Рабочего стола №\(space.index) больше нет — создайте его в Mission Control")
+                    "Рабочего стола №\(space.index) больше нет — создайте его в Mission Control"
+                )
                 continue
             }
 
@@ -129,7 +132,9 @@ public struct SnapshotRestorer {
 
             do {
                 try await navigator.activate(
-                    spaceID: targetSpace.id, displayUUID: target.displayUUID)
+                    spaceID: targetSpace.id,
+                    displayUUID: target.displayUUID
+                )
             } catch {
                 report.problems.append(error.localizedDescription)
                 continue
@@ -171,7 +176,8 @@ public struct SnapshotRestorer {
             where live[window.id] == nil {
                 live[window.id] = window
                 candidates.append(
-                    MatchCandidate(id: window.id, bundleID: window.bundleID, title: window.title))
+                    MatchCandidate(id: window.id, bundleID: window.bundleID, title: window.title)
+                )
             }
         }
 
@@ -201,7 +207,8 @@ public struct SnapshotRestorer {
     ) async -> RestoreReport {
         var report = RestoreReport()
 
-        let movable = matched
+        let movable =
+            matched
             .filter { !$0.snapshot.isFullscreen }
             .map(\.window.id)
             .filter { !spaces.spaceIDs(ofWindow: $0).contains(spaceID) }

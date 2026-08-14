@@ -87,7 +87,8 @@ enum MachOSymbols {
         )
     ) -> String {
         withUnsafeBytes(of: raw) { bytes in
-            String(cString: bytes.baseAddress!.assumingMemoryBound(to: CChar.self))
+            guard let base = bytes.baseAddress else { return "" }
+            return String(cString: base.assumingMemoryBound(to: CChar.self))
         }
     }
 }

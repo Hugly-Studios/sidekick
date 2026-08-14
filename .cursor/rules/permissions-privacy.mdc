@@ -1,0 +1,13 @@
+---
+description: TCC, Team ID stability, and what must never be logged
+alwaysApply: true
+---
+
+# Permissions and privacy
+
+- Keep the signing Team ID stable. Changing it resets Accessibility, FDA, microphone and speech grants.
+- `FeatureRegistry` checks `requiredPermissions` before `activate()`. Do not bypass this with a live system call inside the feature.
+- `sidekick doctor --json` is the source of truth for missing grants and the System Settings pane URL.
+- Never log message bodies, clipboard contents, speech transcripts, or full home-directory paths of other apps. This is mandatory for Messages.
+- Do not run modules that change global system state on the developer's machine without an explicit request.
+- Smoke exits with code 3 when a required permission is missing — treat that as "needs a human click", not as a broken build.

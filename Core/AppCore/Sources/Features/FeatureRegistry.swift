@@ -20,6 +20,7 @@ public final class FeatureRegistry {
 
     private let settings: any SettingsStore
     private let commands: CommandRegistry
+    private let permissions: any PermissionChecking
     private let log: Logger
 
     public init(
@@ -28,10 +29,12 @@ public final class FeatureRegistry {
         events: EventBus,
         commands: CommandRegistry,
         log: Logger,
-        launch: LaunchContext = LaunchContext(isLoginLaunch: false)
+        launch: LaunchContext = LaunchContext(isLoginLaunch: false),
+        permissions: any PermissionChecking = UncheckedPermissions()
     ) {
         self.settings = settings
         self.commands = commands
+        self.permissions = permissions
         self.log = log
 
         entries = featureTypes.map { featureType in
@@ -95,6 +98,7 @@ public final class FeatureRegistry {
         let entry = entries[index]
 
         do {
+            try await ensurePermissions(for: entry.descriptor)
             try await entry.feature.activate()
             entries[index].failure = nil
             commands.register(entry.feature.commands, owner: entry.id)
@@ -104,6 +108,19 @@ public final class FeatureRegistry {
             log.error(
                 "Feature \(entry.id.rawValue, privacy: .public) failed to activate: \(error.localizedDescription, privacy: .public)"
             )
+        }
+    }
+
+    private func ensurePermissions(for descriptor: FeatureDescriptor) async throws {
+        for permission in descriptor.requiredPermissions {
+            var status = permissions.status(of: permission)
+            if status != .granted {
+                status = await permissions.request(permission)
+            }
+
+            if status != .granted {
+                throw FeatureActivationError.missingPermission(permission)
+            }
         }
     }
 

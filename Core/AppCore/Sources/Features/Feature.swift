@@ -75,7 +75,7 @@ public enum FeatureActivationError: Error, LocalizedError {
     case missingPermission(PermissionKind)
     case unsupportedSystem(String)
 
-    public var errorDescription: String? {
+    nonisolated public var errorDescription: String? {
         switch self {
         case .missingPermission(let permission):
             "Требуется разрешение: \(permission.title)"

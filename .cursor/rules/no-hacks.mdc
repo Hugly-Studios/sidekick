@@ -1,0 +1,23 @@
+---
+description: Prefer proper architectural solutions over hacks, workarounds, and band-aids
+alwaysApply: true
+---
+
+# No Hacks — Fix the Root Cause
+
+When something doesn't work or doesn't fit the current architecture, **refactor the architecture** rather than adding a workaround. A significant but correct redesign is always preferable to a small but leaky hack.
+
+## Core Principles
+
+- **Root cause over symptom.** If a fix addresses only one narrow case and leaves the underlying problem intact — stop. Redesign the part that's actually broken.
+- **No special-case branches.** Don't add `if` guards, type checks, or flags to patch over a design flaw.
+- **Propagate changes fully.** When a refactor touches an interface, update all callers. Don't leave adapters or shims "for now".
+- **Ask before hacking.** If the proper fix looks too large or risky, surface the trade-off to the user instead of silently choosing the quick path.
+
+## Red Flags — Stop and Redesign
+
+- Adding a boolean parameter to toggle behavior for "just this one caller"
+- Wrapping a function in try/catch to silence an error that shouldn't happen
+- Duplicating code because "modifying the original is too risky"
+- Comment containing `HACK`, `FIXME`, `WORKAROUND`, or `TODO: remove`
+- Conditional logic that checks a specific value to patch one edge case

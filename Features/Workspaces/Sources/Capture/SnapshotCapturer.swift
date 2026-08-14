@@ -67,7 +67,8 @@ public struct SnapshotCapturer {
             uniquingKeysWith: { first, _ in first }
         )
 
-        return identifiers
+        return
+            identifiers
             .compactMap { visible[$0] }
             .map { window in
                 WindowSnapshot(

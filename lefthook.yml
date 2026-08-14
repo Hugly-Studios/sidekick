@@ -1,0 +1,19 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: swift-format
+      glob: "*.swift"
+      run: xcrun swift-format lint --strict {staged_files}
+
+    - name: swiftlint
+      glob: "*.swift"
+      run: mise exec -- swiftlint lint --strict --quiet {staged_files}
+
+pre-push:
+  jobs:
+    - name: verify
+      run: make verify
+
+    - name: actionlint
+      glob: ".github/workflows/*.{yml,yaml}"
+      run: mise exec -- actionlint

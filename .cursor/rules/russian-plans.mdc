@@ -1,0 +1,8 @@
+---
+description: Write plans in Russian when in plan mode
+alwaysApply: true
+---
+
+# Plans in Russian
+
+When operating in **plan mode**, write the entire plan — headings, descriptions, trade-off analysis, questions — in Russian (Русский). Code snippets, file paths, and technical identifiers stay as-is.

@@ -13,14 +13,15 @@
 
 - macOS 26 или новее
 - Xcode 26.6
-- [Tuist](https://tuist.dev) — проект описан кодом, `.xcodeproj` не хранится в репозитории. Нужную версию поставит `make setup`.
+- [Tuist](https://tuist.dev) и остальные инструменты пинит [mise](https://mise.jdx.dev). `make setup` ставит их сам.
 
 ## Начало работы
 
 ```bash
-make setup   # подпись, зависимости, генерация проекта
+make setup   # mise, подпись, зависимости, генерация проекта
 make run     # собрать и запустить
 make doctor  # как приложение установлено и доступно ли оно
+make update  # git pull --ff-only, поставить, прогнать smoke
 ```
 
 ## Команды
@@ -28,22 +29,40 @@ make doctor  # как приложение установлено и досту�
 ```
 make help              список всех команд
 make setup             первый запуск: подпись, зависимости, проект
-make generate          перегенерировать проект (после добавления файлов)
+make generate          перегенерировать проект (после добавления модуля)
 make xcode             перегенерировать и открыть в Xcode
 make build             собрать Debug
 make run               собрать и перезапустить
 make restart           перезапустить без сборки
 make stop              завершить любую запущенную копию
 make test              юнит-тесты
+make verify            формат + lint + сборка + тесты
 make lint / make fmt   проверка и автоформатирование
-make doctor            диагностика установки и доступности
+make doctor            диагностика установки (`sidekick doctor --json`)
 make install           собрать Release и установить в /Applications
+make update            git pull --ff-only + install + smoke
 make uninstall         удалить установленную копию, настройки сохранить
 make purge             удалить копию вместе с настройками и разрешениями
+make new-module        каркас модуля (NAME=Awake)
+make smoke             сквозная проверка установленного приложения
 make reset-permissions забыть выданные разрешения (проверить первый запуск)
 make logs              поток логов приложения
 make clean             удалить сборку и сгенерированный проект
 ```
+
+## CLI
+
+Установленная копия отвечает на команды, пока GUI запущен:
+
+```bash
+scripts/sidekick.sh status --json
+scripts/sidekick.sh features enable workspaces --json
+scripts/sidekick.sh run workspaces.capture --json
+scripts/sidekick.sh doctor --json
+scripts/sidekick.sh logs --since 10m --level error --json
+```
+
+Подробности — [docs/cli.md](docs/cli.md). Обновление на этой машине: `make update`.
 
 ## Рабочие столы: как пользоваться
 
@@ -83,7 +102,7 @@ make clean             удалить сборку и сгенерированн
 
 ## Архитектура
 
-Фича объявляет команды, оболочка их отображает: модуль не знает про меню-бар, горячие клавиши и будущий CLI. Подробнее — [docs/architecture.md](docs/architecture.md), как добавить свой модуль — [docs/adding-a-feature.md](docs/adding-a-feature.md).
+Фича объявляет команды, оболочка их отображает: модуль не знает про меню-бар, горячие клавиши и CLI. Подробнее — [docs/architecture.md](docs/architecture.md), как добавить модуль — [docs/adding-a-feature.md](docs/adding-a-feature.md), тесты — [docs/testing.md](docs/testing.md), релиз — [docs/releasing.md](docs/releasing.md).
 
 ## Лицензия
 

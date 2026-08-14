@@ -5,7 +5,9 @@ import Testing
 
 struct SettingsStoreTests {
     private func makeStore() -> (UserDefaultsSettingsStore, UserDefaults) {
-        let defaults = UserDefaults(suiteName: "sidekick.tests.\(UUID().uuidString)")!
+        let defaults =
+            UserDefaults(suiteName: "sidekick.tests.\(UUID().uuidString)")
+            ?? UserDefaults.standard
         return (UserDefaultsSettingsStore(defaults: defaults), defaults)
     }
 
@@ -26,7 +28,7 @@ struct SettingsStoreTests {
     }
 
     @Test func roundTripsCodableValues() {
-        struct Snapshot: Codable, Sendable, Equatable {
+        nonisolated struct Snapshot: Codable, Sendable, Equatable {
             let name: String
             let count: Int
         }
@@ -48,6 +50,15 @@ struct SettingsStoreTests {
 
         #expect(defaults.object(forKey: "features.awake.timeout") as? Int == 7)
         #expect(store.value(for: SettingKey("timeout", default: 0)) == 0)
+    }
+
+    @Test func inspectAndWriteRoundTripBooleans() {
+        let (store, _) = makeStore()
+
+        store.write("features.workspaces.enabled", value: "true")
+
+        #expect(store.inspect("features.workspaces.enabled") == "true")
+        #expect(store.value(for: SettingKey("features.workspaces.enabled", default: false)) == true)
     }
 
     @Test func fallsBackToDefaultOnTypeMismatch() {
