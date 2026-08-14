@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import TestSupport
 import Testing
 
 @testable import AppCore
@@ -42,9 +43,35 @@ private final class StubFeature: Feature {
 }
 
 @MainActor
+private final class PermissionedFeature: Feature {
+    static let descriptor = FeatureDescriptor(
+        id: "permissioned",
+        title: "Permissioned",
+        summary: "Requires accessibility",
+        symbolName: "lock",
+        requiredPermissions: [.accessibility],
+        isEnabledByDefault: true
+    )
+
+    init(context: FeatureContext) {
+        _ = context
+    }
+
+    func activate() async throws {}
+
+    func deactivate() async {}
+
+    func makeSettingsView() -> AnyView {
+        AnyView(EmptyView())
+    }
+}
+
+@MainActor
 struct FeatureRegistryTests {
     private func makeRegistry(shouldFail: Bool = false) -> (FeatureRegistry, CommandRegistry) {
-        let defaults = UserDefaults(suiteName: "sidekick.tests.\(UUID().uuidString)")!
+        let defaults =
+            UserDefaults(suiteName: "sidekick.tests.\(UUID().uuidString)")
+            ?? UserDefaults.standard
         let settings = UserDefaultsSettingsStore(defaults: defaults)
 
         if shouldFail {
@@ -94,8 +121,32 @@ struct FeatureRegistryTests {
         #expect(commands.commands(of: "stub").isEmpty)
     }
 
+    @Test func missingRequiredPermissionBlocksActivation() async {
+        let defaults =
+            UserDefaults(suiteName: "sidekick.tests.\(UUID().uuidString)")
+            ?? UserDefaults.standard
+        let settings = UserDefaultsSettingsStore(defaults: defaults)
+        let permissions = FakePermissions([.accessibility: .denied])
+        let commands = CommandRegistry(log: AppLog.make(category: "tests"))
+        let registry = FeatureRegistry(
+            featureTypes: [PermissionedFeature.self],
+            settings: settings,
+            events: EventBus(),
+            commands: commands,
+            log: AppLog.make(category: "tests"),
+            permissions: permissions
+        )
+
+        await registry.start()
+
+        #expect(registry.entry(for: "permissioned")?.failure != nil)
+        #expect(commands.commands(of: "permissioned").isEmpty)
+    }
+
     @Test func enabledStatePersistsInSettings() async {
-        let defaults = UserDefaults(suiteName: "sidekick.tests.\(UUID().uuidString)")!
+        let defaults =
+            UserDefaults(suiteName: "sidekick.tests.\(UUID().uuidString)")
+            ?? UserDefaults.standard
         let settings = UserDefaultsSettingsStore(defaults: defaults)
         let makeRegistry = {
             FeatureRegistry(

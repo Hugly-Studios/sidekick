@@ -13,4 +13,5 @@ SIDEKICK_CODE_SIGN_STYLE = Manual
 SIDEKICK_CODE_SIGN_IDENTITY = -
 SIDEKICK_DEVELOPMENT_TEAM =
 
+#include? "Version.xcconfig"
 #include? "Signing.local.xcconfig"

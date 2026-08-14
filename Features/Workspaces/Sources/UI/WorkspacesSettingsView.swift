@@ -1,4 +1,5 @@
-import Automation
+import AppCore
+import AppKit
 import SwiftUI
 
 struct WorkspacesSettingsView: View {
@@ -30,9 +31,14 @@ struct WorkspacesSettingsView: View {
             Label("Нужен доступ к управлению компьютером", systemImage: "lock")
                 .foregroundStyle(Color.orange)
 
+            // Only a deep link: asking for the grant belongs to the registry,
+            // which does it before activating the module.
             Button("Открыть настройки доступа") {
-                AccessibilityAuthorization.prompt()
-                AccessibilityAuthorization.openSystemSettings()
+                guard let url = URL(string: PermissionKind.accessibility.settingsURL) else {
+                    return
+                }
+
+                NSWorkspace.shared.open(url)
             }
         } footer: {
             Text(
@@ -149,7 +155,8 @@ struct WorkspacesSettingsView: View {
             LabeledContent("Автоперестановка") {
                 Text(feature.orderGuard.isAutoRearrangeDisabled ? "выключена" : "включена")
                     .foregroundStyle(
-                        feature.orderGuard.isAutoRearrangeDisabled ? Color.secondary : Color.orange)
+                        feature.orderGuard.isAutoRearrangeDisabled ? Color.secondary : Color.orange
+                    )
             }
 
             if feature.spaceOrderDrifted() {

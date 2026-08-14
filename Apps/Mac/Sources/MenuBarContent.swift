@@ -26,7 +26,7 @@ struct MenuBarContent: View {
 
                 ForEach(environment.commands.commands(of: entry.id)) { command in
                     Button(command.title) {
-                        environment.commands.run(command.id)
+                        environment.commands.runDetached(command.id)
                     }
                 }
             }

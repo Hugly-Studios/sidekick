@@ -12,7 +12,8 @@ public final class WorkspacesFeature: Feature {
     public static let descriptor = FeatureDescriptor(
         id: "workspaces",
         title: "Рабочие столы",
-        summary: "Снимки столов, приложений и расположения окон с восстановлением после перезагрузки",
+        summary:
+            "Снимки столов, приложений и расположения окон с восстановлением после перезагрузки",
         symbolName: "rectangle.3.group",
         requiredPermissions: [.accessibility],
         isEnabledByDefault: false
@@ -35,22 +36,42 @@ public final class WorkspacesFeature: Feature {
     private let inspector: WindowInspector
     private let capturer: SnapshotCapturer?
     private let restorer: SnapshotRestorer?
+    private var loginRestore: Task<Void, Never>?
 
-    public init(context: FeatureContext) {
-        let spaces = SkyLightSpaces()
-        let navigator = SkyLightSpaceNavigator()
-        let inspector = WindowInspector()
+    public convenience init(context: FeatureContext) {
+        self.init(
+            context: context,
+            store: SnapshotStore(),
+            spaces: SkyLightSpaces(),
+            navigator: SkyLightSpaceNavigator(),
+            inspector: WindowInspector()
+        )
+    }
 
+    init(
+        context: FeatureContext,
+        store: SnapshotStore,
+        spaces: SkyLightSpaces?,
+        navigator: SkyLightSpaceNavigator?,
+        inspector: WindowInspector
+    ) {
         self.context = context
-        self.store = SnapshotStore()
+        self.store = store
         self.spaces = spaces
         self.inspector = inspector
 
         if let spaces, let navigator {
             self.capturer = SnapshotCapturer(
-                spaces: spaces, navigator: navigator, inspector: inspector)
+                spaces: spaces,
+                navigator: navigator,
+                inspector: inspector
+            )
             self.restorer = SnapshotRestorer(
-                spaces: spaces, mover: spaces, navigator: navigator, inspector: inspector)
+                spaces: spaces,
+                mover: spaces,
+                navigator: navigator,
+                inspector: inspector
+            )
         } else {
             self.capturer = nil
             self.restorer = nil
@@ -65,23 +86,17 @@ public final class WorkspacesFeature: Feature {
 
     // MARK: - Lifecycle
 
-    /// Locking the desktop order needs no permission, so a missing Accessibility
-    /// grant must not disable the whole module: it only blocks reading and moving
-    /// windows, which the snapshot commands report when used.
+    /// Reaching this point means Accessibility is granted: `requiredPermissions`
+    /// makes the registry ask for it and refuse activation without it.
     public func activate() async throws {
         guard spaces != nil else {
             throw FeatureActivationError.unsupportedSystem(
-                "Управление рабочими столами недоступно на этой версии macOS")
+                "Управление рабочими столами недоступно на этой версии macOS"
+            )
         }
 
         reload()
         context.log.info("Activated, window access: \(self.hasWindowAccess, privacy: .public)")
-
-        // Enabling the module is exactly when asking for the permission makes
-        // sense; macOS shows this prompt at most once, then stays silent.
-        if !hasWindowAccess {
-            AccessibilityAuthorization.prompt()
-        }
 
         if locksSpaceOrder {
             orderGuard.startWatching()
@@ -93,21 +108,56 @@ public final class WorkspacesFeature: Feature {
     }
 
     public func deactivate() async {
+        loginRestore?.cancel()
+        loginRestore = nil
         orderGuard.stopWatching()
     }
 
     public var commands: [Command] {
         [
-            Command(id: "workspaces.capture", title: "Сохранить снимок столов", symbolName: "camera")
-            {
-                await self.capture(named: nil)
+            Command(
+                id: "workspaces.capture",
+                title: "Сохранить снимок столов",
+                symbolName: "camera"
+            ) { name in
+                await self.capture(named: name)
+                if let problems = self.lastReport?.problems, !problems.isEmpty {
+                    return problems.joined(separator: "\n")
+                }
+
+                self.reload()
+                guard let snapshot = self.snapshots.first else { return "снимок не сохранён" }
+                return
+                    "сохранено «\(snapshot.name)»: \(snapshot.spaceCount) столов, \(snapshot.windowCount) окон"
             },
             Command(
                 id: "workspaces.restore",
                 title: "Восстановить снимок",
                 symbolName: "arrow.counterclockwise"
-            ) {
-                await self.restoreDefault()
+            ) { name in
+                self.reload()
+                let snapshot =
+                    name.flatMap { wanted in self.snapshots.first { $0.name == wanted } }
+                    ?? self.defaultSnapshot
+                guard let snapshot else { return "снимок не найден" }
+
+                await self.restore(id: snapshot.id)
+                guard let report = self.lastReport else { return "нет результата" }
+                return ([report.summary] + report.problems.map { "проблема: \($0)" })
+                    .joined(separator: "\n")
+            },
+            Command(id: "workspaces.list", title: "Список снимков", symbolName: "list.bullet") {
+                _ in
+                self.reload()
+                guard !self.snapshots.isEmpty else { return "снимков нет" }
+
+                return self.snapshots
+                    .map { snapshot in
+                        let marker = self.defaultSnapshotID == snapshot.id ? "*" : " "
+                        return
+                            "\(marker) \(snapshot.name) — \(snapshot.spaceCount) столов, \(snapshot.windowCount) окон"
+                    }
+                    .joined(separator: "\n")
             },
         ]
     }
@@ -249,9 +299,14 @@ public final class WorkspacesFeature: Feature {
     /// At login the system is still opening its own login items and reopening
     /// windows; restoring into that churn moves windows that are about to move
     /// again, so the layout is applied once things settle.
+    ///
+    /// Held onto so `deactivate()` can cancel it: turning the module off during
+    /// the wait must not leave a restore to fire from a disabled module.
     private func scheduleLoginRestore() {
-        Task { [weak self] in
+        loginRestore?.cancel()
+        loginRestore = Task { [weak self] in
             try? await Task.sleep(for: Self.loginSettleDelay)
+            guard !Task.isCancelled else { return }
             await self?.restoreDefault()
         }
     }

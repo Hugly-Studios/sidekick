@@ -1,5 +1,6 @@
 import AppCore
 import AppKit
+import ControlSurface
 import HotkeysKit
 import SwiftUI
 
@@ -7,12 +8,7 @@ import SwiftUI
 enum SidekickMain {
     @MainActor
     static func main() {
-        if CommandLine.arguments.contains("--doctor") {
-            Doctor.run()
-            return
-        }
-
-        if WorkspacesCommandLine.run(arguments: CommandLine.arguments) {
+        if ControlCommandLine.run(arguments: CommandLine.arguments) {
             return
         }
 
@@ -41,12 +37,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let environment = AppEnvironment()
     lazy var settingsWindow = SettingsWindowController(environment: environment)
 
+    private var controlServer: ControlServer?
     private static let hasShownWelcomeKey = SettingKey("hasShownWelcome", default: false)
 
     func applicationDidFinishLaunching(_: Notification) {
+        startControlServer()
+
         Task {
             await environment.features.start()
-            WorkspacesRemoteHandler.install(features: environment.features)
         }
 
         environment.hotkeys.bind(Hotkeys.openPanel) { [weak self] in
@@ -60,16 +58,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showWelcomeWindowIfNeeded()
     }
 
-    /// Launching the app again is the reliable way back in when the menu bar icon
-    /// is not reachable, so the window is shown regardless of other open windows.
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
         settingsWindow.show()
         return true
     }
 
-    /// Gives features a real async shutdown hook instead of racing termination.
     func applicationShouldTerminate(_ application: NSApplication) -> NSApplication.TerminateReply {
         Task {
+            controlServer?.stop()
             await environment.features.stop()
             application.reply(toApplicationShouldTerminate: true)
         }
@@ -77,9 +73,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return .terminateLater
     }
 
-    /// The menu bar icon can be unreachable (a full menu bar on a notched Mac hides
-    /// new status items), so the first manual launch always shows a real window.
-    /// Starting at login must stay silent.
+    private func startControlServer() {
+        let handler = AppControlHandler(
+            environment: environment,
+            permissions: environment.permissions
+        )
+
+        let server = ControlServer(handler: handler)
+        do {
+            try server.start()
+            controlServer = server
+        } catch {
+            AppLog.make(category: "control").error(
+                "Control server failed: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
     private func showWelcomeWindowIfNeeded() {
         guard !AppInstance.wasLaunchedByLaunchd,
             !environment.settings.value(for: Self.hasShownWelcomeKey)

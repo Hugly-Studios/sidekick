@@ -14,18 +14,33 @@ public struct CommandID: RawRepresentable, Hashable, Sendable, ExpressibleByStri
 /// A single action a feature exposes.
 ///
 /// Declared once, then rendered by every surface: menu bar item, global hotkey,
-/// and later the CLI and App Intents.
+/// and the CLI.
 public struct Command: Identifiable, Sendable {
     public let id: CommandID
     public let title: String
     public let symbolName: String?
-    public let run: @Sendable () async throws -> Void
+    public let run: @MainActor @Sendable (_ argument: String?) async throws -> String
 
     public init(
         id: CommandID,
         title: String,
         symbolName: String? = nil,
-        run: @escaping @Sendable () async throws -> Void
+        run: @escaping @MainActor @Sendable () async throws -> Void
+    ) {
+        self.id = id
+        self.title = title
+        self.symbolName = symbolName
+        self.run = { _ in
+            try await run()
+            return ""
+        }
+    }
+
+    public init(
+        id: CommandID,
+        title: String,
+        symbolName: String? = nil,
+        run: @escaping @MainActor @Sendable (String?) async throws -> String
     ) {
         self.id = id
         self.title = title

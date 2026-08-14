@@ -1,0 +1,33 @@
+---
+description: How the AI agent should approach tasks — assumptions, verification, conflicts, uncertainty, checkpoints
+alwaysApply: true
+---
+
+# AI Agent Behavior
+
+## State assumptions before acting
+When a task is ambiguous or has multiple valid interpretations, state your
+understanding and key assumptions before writing code. If uncertain about
+intent — ask, don't guess. A wrong assumption wastes the entire implementation.
+
+## Verify against task intent
+After completing work, verify the result matches the user's actual request —
+not just that the code compiles or tests pass. If the request was "fix the
+login bug", success is "login works", not "code changed."
+
+## Surface conflicts, don't average them
+When the codebase has contradictory patterns (two error handling styles, two
+naming conventions, two approaches to the same problem), pick one — the more
+recent or better tested — and explain why. Flag the other for cleanup.
+Never blend conflicting approaches into hybrid code.
+
+## Surface uncertainty explicitly
+If you skipped something, couldn't verify a result, or aren't confident —
+say so. "Completed" is wrong if anything was silently skipped. "Tests pass"
+is wrong if any were skipped. "Fixed" is wrong if you couldn't reproduce
+or verify. Default to surfacing doubt, not hiding it.
+
+## Checkpoint multi-step work
+In tasks with 3+ distinct steps: after each significant step, briefly state
+what was done, what's verified, what remains. If you lose track of the current
+state, stop and restate before continuing.

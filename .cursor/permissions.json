@@ -1,0 +1,10 @@
+{
+  "autoRun": {
+    "allow_instructions": [],
+    "block_instructions": [
+      "Block destructive file operations (rm -rf, git clean -fd, make purge, scripts/uninstall.sh --purge) unless the user explicitly requested them.",
+      "Block commands that change global system state (caffeinate -s, closing other apps, rearranging windows, disabling sleep) unless the user asked or passed --allow-destructive.",
+      "Block tccutil reset unless the user explicitly asked to reset permissions."
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+---
+description: Don't reflexively run tests, linters, and full checks after every small change — hooks and CI own that
+alwaysApply: true
+---
+
+# No Reflexive Verification
+
+Do **not** run tests, linters, or the full suite after every small edit. Verification is owned by pre-commit/pre-push hooks and CI.
+
+## Default behavior
+
+After making changes:
+
+1. Check linter diagnostics via `ReadLints` on the edited files.
+2. Stop. Do not launch `make verify`, `make test`, or `swiftlint` on your own initiative.
+
+## When running checks IS appropriate
+
+- The user explicitly asks to run tests/linters or to verify.
+- The task itself is about tests — run the **specific** test file.
+- You made a risky, wide-reaching change and genuinely doubt correctness — run the **narrowest** relevant check and say why.
+- CI already failed and you're fixing it.
+- The change is a new module or control-surface work: then follow `AGENTS.md` (`make verify`, then `make install` + `scripts/smoke.sh` if the socket/CLI/lifecycle is involved).

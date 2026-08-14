@@ -2,6 +2,7 @@ import AppCore
 import HotkeysKit
 import OSLog
 import Observation
+import PermissionsKit
 import Workspaces
 
 /// Wires the kernel together and holds the list of features the app ships with.
@@ -12,6 +13,7 @@ final class AppEnvironment {
     let events: EventBus
     let commands: CommandRegistry
     let features: FeatureRegistry
+    let permissions: LivePermissionChecker
     let launchAtLogin: LaunchAtLoginController
     let hotkeys: HotkeyService
 
@@ -20,10 +22,12 @@ final class AppEnvironment {
         let settings = UserDefaultsSettingsStore()
         let events = EventBus()
         let commands = CommandRegistry(log: log)
+        let permissions = LivePermissionChecker()
 
         self.settings = settings
         self.events = events
         self.commands = commands
+        self.permissions = permissions
         self.launchAtLogin = LaunchAtLoginController()
         self.hotkeys = HotkeyService()
         self.features = FeatureRegistry(
@@ -32,7 +36,8 @@ final class AppEnvironment {
             events: events,
             commands: commands,
             log: log,
-            launch: LaunchContext(isLoginLaunch: AppInstance.wasLaunchedByLaunchd)
+            launch: LaunchContext(isLoginLaunch: AppInstance.wasLaunchedByLaunchd),
+            permissions: permissions
         )
     }
 

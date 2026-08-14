@@ -36,21 +36,38 @@ public final class CommandRegistry {
         entries.first { $0.command.id == id }?.command
     }
 
-    /// Runs a command and logs failures — surfaces must not swallow them silently.
-    public func run(_ id: CommandID) {
+    /// Runs a command and returns its result. Surfaces that cannot await should
+    /// call ``runDetached(_:)`` instead.
+    @discardableResult
+    public func run(_ id: CommandID, argument: String? = nil) async throws -> String {
         guard let command = command(id: id) else {
-            log.error("Command not found: \(id.rawValue, privacy: .public)")
-            return
+            throw CommandError.notFound(id)
         }
 
+        return try await command.run(argument)
+    }
+
+    /// Fire-and-forget entry used by the menu bar. Failures are logged here.
+    public func runDetached(_ id: CommandID) {
         Task {
             do {
-                try await command.run()
+                _ = try await run(id)
             } catch {
                 log.error(
                     "Command \(id.rawValue, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
                 )
             }
+        }
+    }
+}
+
+public enum CommandError: Error, LocalizedError {
+    case notFound(CommandID)
+
+    nonisolated public var errorDescription: String? {
+        switch self {
+        case .notFound(let id):
+            "Команда не найдена: \(id.rawValue)"
         }
     }
 }

@@ -29,7 +29,9 @@ struct WindowMatcherTests {
     @Test func neverMatchesAcrossApps() {
         let pairs = WindowMatcher.pair(
             snapshots: [snapshot("com.apple.Safari", "Документация")],
-            candidates: [MatchCandidate(id: 1, bundleID: "com.apple.Terminal", title: "Документация")]
+            candidates: [
+                MatchCandidate(id: 1, bundleID: "com.apple.Terminal", title: "Документация")
+            ]
         )
 
         #expect(pairs.isEmpty)
@@ -73,7 +75,9 @@ struct WindowMatcherTests {
             candidates: [
                 MatchCandidate(id: 3, bundleID: "com.microsoft.VSCode", title: "Другой проект"),
                 MatchCandidate(
-                    id: 4, bundleID: "com.microsoft.VSCode", title: "Sidekick — Project.swift — изменён"
+                    id: 4,
+                    bundleID: "com.microsoft.VSCode",
+                    title: "Sidekick — Project.swift — изменён"
                 ),
             ]
         )

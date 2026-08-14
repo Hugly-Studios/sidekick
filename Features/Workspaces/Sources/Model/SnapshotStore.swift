@@ -11,19 +11,22 @@ public struct SnapshotStore: Sendable {
         self.directory =
             directory
             ?? URL.applicationSupportDirectory
-                .appending(path: "Sidekick/Workspaces", directoryHint: .isDirectory)
+            .appending(path: "Sidekick/Workspaces", directoryHint: .isDirectory)
     }
 
     public func all() -> [WorkspaceSnapshot] {
         guard
             let files = try? FileManager.default.contentsOfDirectory(
-                at: directory, includingPropertiesForKeys: nil)
+                at: directory,
+                includingPropertiesForKeys: nil
+            )
         else { return [] }
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
-        return files
+        return
+            files
             .filter { $0.pathExtension == "json" }
             .compactMap { try? Data(contentsOf: $0) }
             .compactMap { try? decoder.decode(WorkspaceSnapshot.self, from: $0) }

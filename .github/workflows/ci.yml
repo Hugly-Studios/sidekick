@@ -13,17 +13,18 @@ env:
   DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
 
 jobs:
-  build:
-    name: Build and test
+  verify:
+    name: Verify
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
-
-      - name: Cache Tuist
-        uses: actions/cache@v5
         with:
-          path: ~/.cache/sidekick/tuist
-          key: tuist-${{ hashFiles('.tuist-version') }}
+          fetch-depth: 0
+
+      - name: Install mise
+        uses: jdx/mise-action@v2
+        with:
+          install: true
 
       - name: Cache Swift packages
         uses: actions/cache@v5
@@ -31,30 +32,39 @@ jobs:
           path: Tuist/.build
           key: spm-${{ hashFiles('Tuist/Package.resolved') }}
 
-      - name: Resolve dependencies
-        run: scripts/tuist.sh install
+      - name: Signing fallback
+        run: scripts/setup-signing.sh
+
+      - name: Version
+        run: scripts/version.sh
 
       - name: Generate project
-        run: scripts/tuist.sh generate --no-open
+        run: mise exec -- tuist install && mise exec -- tuist generate --no-open
+
+      - name: Format
+        run: xcrun swift-format lint --strict --recursive --parallel Apps Core Features Tuist Project.swift Tuist.swift
+
+      - name: SwiftLint
+        run: mise exec -- swiftlint lint --strict --quiet
 
       - name: Build and test
         run: |
           set -o pipefail
+          mkdir -p build
           xcodebuild \
             -workspace Sidekick.xcworkspace \
             -scheme Sidekick \
             -configuration Debug \
             -destination 'platform=macOS' \
-            -quiet \
-            test
+            -derivedDataPath build \
+            -resultBundlePath build/Sidekick.xcresult \
+            test \
+            | mise exec -- xcbeautify --renderer github-actions --report junit --report-path build/junit.xml
 
-  format:
-    name: Format
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Lint formatting
-        run: |
-          xcrun swift-format lint --strict --recursive --parallel \
-            Apps Core Tuist Project.swift Tuist.swift
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit
+          path: build/junit.xml
+          if-no-files-found: ignore

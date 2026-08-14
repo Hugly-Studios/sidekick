@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+
+jobs:
+  release:
+    name: Build Release
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install mise
+        uses: jdx/mise-action@v2
+        with:
+          install: true
+
+      - name: Signing fallback
+        run: scripts/setup-signing.sh
+
+      - name: Version
+        run: scripts/version.sh
+
+      - name: Generate and build
+        run: |
+          mise exec -- tuist install
+          mise exec -- tuist generate --no-open
+          xcodebuild \
+            -workspace Sidekick.xcworkspace \
+            -scheme Sidekick \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath build \
+            -quiet \
+            build
+
+      - name: Package
+        run: |
+          ditto -c -k --keepParent \
+            build/Build/Products/Release/Sidekick.app \
+            build/Sidekick.app.zip
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sidekick.app
+          path: build/Sidekick.app.zip
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            build/Sidekick.app.zip \
+            --title "${{ github.ref_name }}" \
+            --generate-notes

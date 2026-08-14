@@ -1,0 +1,16 @@
+---
+description: Swift 6.2 conventions for Sidekick — concurrency, DI, module boundaries
+globs: "**/*.swift"
+alwaysApply: false
+---
+
+# Swift conventions
+
+- Imports at the top of the file. No inline imports.
+- Switch over a union or enum: exhaustive, `never` in `default`.
+- App and feature targets are `MainActor` by default. Library modules (`SystemKit`, `ControlSurface`, `PrivateAPI`) stay `nonisolated`. Background work needs an explicit `@concurrent` or a nonisolated type — do not assume `nonisolated async` hops off the caller.
+- Features expose `convenience init(context:)` plus a designated init with injected system seams.
+- Settings only through `context.settings`. Commands return `String`.
+- Do not talk to the menu bar, hotkeys or CLI from a feature.
+- Private API: pair every `dlsym` / bridged symbol with a resolve test like `SkyLightAvailabilityTests`.
+- Prefer `buildableFolders`. `tuist generate` only after adding a module.

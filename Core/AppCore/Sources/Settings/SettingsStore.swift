@@ -17,6 +17,10 @@ public protocol SettingsStore: Sendable {
 
     /// A view of the same storage with keys prefixed, used to isolate features.
     func namespaced(_ namespace: String) -> any SettingsStore
+
+    /// Untyped access for the CLI. Values are stored as Bool, Int or String.
+    func inspect(_ name: String) -> String?
+    func write(_ name: String, value: String)
 }
 
 /// `UserDefaults`-backed store.
@@ -65,6 +69,39 @@ public struct UserDefaultsSettingsStore: SettingsStore {
 
     public func namespaced(_ namespace: String) -> any SettingsStore {
         UserDefaultsSettingsStore(defaults: defaults, prefix: storageKey(for: namespace))
+    }
+
+    public func inspect(_ name: String) -> String? {
+        guard let stored = defaults.object(forKey: storageKey(for: name)) else { return nil }
+
+        switch stored {
+        case let value as Bool:
+            return value ? "true" : "false"
+        case let value as Int:
+            return String(value)
+        case let value as Double:
+            return String(value)
+        case let value as String:
+            return value
+        default:
+            return String(describing: stored)
+        }
+    }
+
+    public func write(_ name: String, value: String) {
+        let key = storageKey(for: name)
+
+        if value == "true" || value == "false" {
+            defaults.set(value == "true", forKey: key)
+            return
+        }
+
+        if let number = Int(value) {
+            defaults.set(number, forKey: key)
+            return
+        }
+
+        defaults.set(value, forKey: key)
     }
 
     private func storageKey(for name: String) -> String {

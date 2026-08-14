@@ -1,0 +1,15 @@
+---
+description: Prove a problem actually exists before changing code, and never make no-op edits that don't change behavior
+alwaysApply: true
+---
+
+# Verify Before Fixing — No Phantom Bugs, No No-Op Edits
+
+Before changing code to "fix" something, **prove the problem is real**.
+
+## Two hard gates before any "fix"
+
+1. **Prove the bug exists.** Trace the actual execution with real values. State the concrete input that triggers the wrong behavior and the exact line where it goes wrong. If you cannot, the bug is unproven — do not change code.
+2. **Prove the change does something.** Name one concrete input where the behavior **differs** between the old and new code. If old and new produce the same result for every input, the edit is a no-op — do not make it.
+
+If the user *says* "X is broken" but your trace shows X is correct, the right answer is **"the code is correct, here's why"** — not a cosmetic rewrite.

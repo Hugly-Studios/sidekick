@@ -14,4 +14,7 @@ xcuserdata/
 # Local signing identity override
 Config/Signing.local.xcconfig
 
+# Generated from git by scripts/version.sh
+Config/Version.xcconfig
+
 .DS_Store
